@@ -13,7 +13,7 @@ create table gold_karats (
 -- Published ledger (append-only)
 -- ---------------------------------------------------------
 create table gold_rates (
-    id uuid primary key default gen_random_uuid(),
+    id uuid primary key default uuid_generate_v4(),
     city_id smallint not null references cities(id),
     karat_id smallint not null references gold_karats(id),
     rate_per_tola numeric(14,2) not null check (rate_per_tola > 0),
@@ -37,7 +37,7 @@ create index idx_gold_rates_source on gold_rates (source_id);
 -- Submission / staging table
 -- ---------------------------------------------------------
 create table gold_rate_submissions (
-    id uuid primary key default gen_random_uuid(),
+    id uuid primary key default uuid_generate_v4(),
     city_id smallint not null references cities(id),
     karat_id smallint not null references gold_karats(id),
     rate_per_tola numeric(14,2) not null check (rate_per_tola > 0),

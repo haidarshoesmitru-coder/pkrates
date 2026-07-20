@@ -1,7 +1,7 @@
 import type { ComponentType } from "react";
 import Link from "next/link";
 import {
-  Coins,
+  Coins, Gem,
   Banknote,
   Fuel,
   Bitcoin,
@@ -16,6 +16,7 @@ import { categories } from "@/lib/mock-data";
 
 const iconMap: Record<string, ComponentType<{ className?: string }>> = {
   coins: Coins,
+  gem: Gem,
   banknote: Banknote,
   fuel: Fuel,
   bitcoin: Bitcoin,

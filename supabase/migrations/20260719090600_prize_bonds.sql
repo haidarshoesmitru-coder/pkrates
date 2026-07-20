@@ -15,7 +15,7 @@ create table prize_bond_denominations (
 -- Draws
 -- ---------------------------------------------------------
 create table prize_bond_draws (
-    id uuid primary key default gen_random_uuid(),
+    id uuid primary key default uuid_generate_v4(),
     denomination_id smallint not null references prize_bond_denominations(id),
     draw_number integer not null check (draw_number > 0),
     city_id smallint not null references cities(id),
@@ -34,7 +34,7 @@ create index idx_prize_bond_draws_date on prize_bond_draws (draw_date);
 create index idx_prize_bond_draws_denomination on prize_bond_draws (denomination_id, draw_number desc);
 
 create table prize_bond_draw_submissions (
-    id uuid primary key default gen_random_uuid(),
+    id uuid primary key default uuid_generate_v4(),
     denomination_id smallint not null references prize_bond_denominations(id),
     draw_number integer not null check (draw_number > 0),
     city_id smallint not null references cities(id),
@@ -61,7 +61,7 @@ create index idx_pb_draw_submissions_pending on prize_bond_draw_submissions (den
 -- Winners (published) — bulk rows per draw
 -- ---------------------------------------------------------
 create table prize_bond_winners (
-    id uuid primary key default gen_random_uuid(),
+    id uuid primary key default uuid_generate_v4(),
     draw_id uuid not null references prize_bond_draws(id) on delete cascade,
     prize_tier smallint not null check (prize_tier between 1 and 4),
     bond_number text not null,
@@ -81,7 +81,7 @@ create index idx_prize_bond_draw_lookup on prize_bond_winners (draw_id, prize_ti
 -- individual prize_bond_winners rows on approval.
 -- ---------------------------------------------------------
 create table prize_bond_winner_submissions (
-    id uuid primary key default gen_random_uuid(),
+    id uuid primary key default uuid_generate_v4(),
     draw_id uuid not null references prize_bond_draws(id) on delete cascade,
     source_id uuid not null references sources(id),
     winners_payload jsonb not null,   -- [{ "prize_tier": 1, "bond_number": "...", "prize_amount": 15000000 }, ...]

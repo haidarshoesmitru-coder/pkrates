@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import {
-  Coins,
+  Coins, Gem,
   Banknote,
   Fuel,
   Ticket,
@@ -34,6 +34,7 @@ import type { FieldValue, PublishedRecord, Submission } from "@/types/admin";
 
 const iconMap: Record<string, LucideIcon> = {
   coins: Coins,
+  gem: Gem,
   banknote: Banknote,
   fuel: Fuel,
   ticket: Ticket,

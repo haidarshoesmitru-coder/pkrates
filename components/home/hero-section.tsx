@@ -1,5 +1,6 @@
 "use client";
 
+import * as React from "react";
 import { motion } from "framer-motion";
 import { Search, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -7,9 +8,16 @@ import { PulseDot } from "@/components/shared/pulse-dot";
 import { PulseLine } from "@/components/shared/pulse-line";
 import { ShareButton } from "@/components/shared/share-button";
 import { WatchlistButton } from "@/components/shared/watchlist-button";
+import { SearchResultsList } from "@/components/shared/search-results-list";
+import { useGlobalSearch } from "@/components/shared/use-global-search";
 import { lastUpdated } from "@/lib/mock-data";
 
 export function HeroSection() {
+  const [isSearchFocused, setIsSearchFocused] = React.useState(false);
+  const { query, setQuery, results, activeIndex, handleKeyDown, navigate } =
+    useGlobalSearch(() => setIsSearchFocused(false));
+  const showDropdown = isSearchFocused && query.trim().length > 0;
+
   return (
     <section className="relative overflow-hidden border-b border-ink-200 dark:border-ink-800">
       <div className="absolute inset-0 -z-10 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-pulse-100/60 via-transparent to-transparent dark:from-pulse-950/40" />
@@ -57,12 +65,36 @@ export function HeroSection() {
               className="mt-8 flex flex-col sm:flex-row gap-3"
             >
               <div className="relative flex-1 max-w-sm">
-                <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-ink-400" />
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-ink-400 z-10" />
                 <input
                   type="text"
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  onKeyDown={handleKeyDown}
+                  onFocus={() => setIsSearchFocused(true)}
+                  onBlur={() => setIsSearchFocused(false)}
                   placeholder="Search &ldquo;gold rate Lahore&rdquo;"
+                  aria-label="Search PKRates"
+                  aria-autocomplete="list"
                   className="h-12 w-full rounded-full border border-ink-200 dark:border-ink-700 bg-[var(--surface)] pl-11 pr-4 text-sm text-ink-900 dark:text-ink-100 placeholder:text-ink-400 focus:outline-none focus:ring-2 focus:ring-pulse-500/60"
                 />
+                {showDropdown && (
+                  <div
+                    // Prevents the input's onBlur from firing before a
+                    // suggestion's onClick registers -- otherwise the
+                    // dropdown would disappear a frame before the click
+                    // could be handled, and nothing would ever navigate.
+                    onMouseDown={(e) => e.preventDefault()}
+                    className="absolute left-0 right-0 top-full mt-2 rounded-2xl border border-ink-200 dark:border-ink-800 bg-[var(--surface)] shadow-xl overflow-hidden z-20"
+                  >
+                    <SearchResultsList
+                      query={query}
+                      results={results}
+                      activeIndex={activeIndex}
+                      onSelect={navigate}
+                    />
+                  </div>
+                )}
               </div>
               <Button size="lg" className="group">
                 View All Rates

@@ -10,7 +10,7 @@ create table fuel_types (
 );
 
 create table fuel_prices (
-    id uuid primary key default gen_random_uuid(),
+    id uuid primary key default uuid_generate_v4(),
     fuel_type_id smallint not null references fuel_types(id),
     price_per_liter numeric(14,2) not null check (price_per_liter > 0),
     previous_price numeric(14,2),
@@ -32,7 +32,7 @@ create index idx_fuel_prices_lookup on fuel_prices (fuel_type_id, effective_from
 create index idx_fuel_prices_status on fuel_prices (status) where status = 'published';
 
 create table fuel_price_submissions (
-    id uuid primary key default gen_random_uuid(),
+    id uuid primary key default uuid_generate_v4(),
     fuel_type_id smallint not null references fuel_types(id),
     price_per_liter numeric(14,2) not null check (price_per_liter > 0),
     notification_reference text not null check (length(trim(notification_reference)) > 0),

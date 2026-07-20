@@ -93,3 +93,18 @@ supabase secrets set SUPABASE_SERVICE_ROLE_KEY=<your-service-role-key>
 - `pkrates_anomaly_flagged` (new in v1.5) — fires only when a submission is
   auto-flagged; intended consumer is a Realtime subscription in the admin
   dashboard for live "something needs review" notifications.
+
+## v1.7 additions
+
+17. `20260719091600_silver.sql` — Silver schema, structurally identical to
+    `20260719090200_gold.sql`.
+18. `20260719091700_silver_workflow_integration.sql` — wires Silver into
+    the existing view-refresh whitelist, scheduled cron batch, publish-notify
+    mapping, approval/promotion trigger, anomaly detection, and RLS. Patches
+    3 existing functions via `create or replace` (no duplicates); adds the
+    `silver` value to the one closed domain enum in the schema
+    (`user_domain_access.domain`) via a catalog lookup rather than a
+    hardcoded constraint name.
+19. `20260719091800_silver_seed_data.sql` — seeds `silver_purities`;
+    extends the 5 existing Sarafa Association sources' `domains[]` rather
+    than inserting duplicate source rows.

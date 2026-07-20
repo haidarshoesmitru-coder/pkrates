@@ -15,6 +15,7 @@ const navGroups = [
     label: "Markets",
     items: [
       { href: "/gold", label: "Gold Rates", desc: "24K–18K, city-wise" },
+      { href: "/silver", label: "Silver Rates", desc: "999 Fine & 925 Sterling" },
       { href: "/currency", label: "Currency Rates", desc: "Interbank & open market" },
       { href: "/petrol", label: "Petrol Prices", desc: "Official OGRA prices" },
       { href: "/crypto", label: "Crypto Prices", desc: "Top coins in PKR" },

@@ -1,26 +1,27 @@
 "use client";
 
 import * as React from "react";
-import Link from "next/link";
-import { Search, Command, ArrowRight, TrendingUp } from "lucide-react";
+import { Search, Command } from "lucide-react";
 import { Dialog, DialogTrigger, DialogContent } from "@/components/ui/dialog";
+import { SearchResultsList } from "@/components/shared/search-results-list";
+import { useGlobalSearch } from "@/components/shared/use-global-search";
+import { getAllCategories } from "@/lib/search";
 
-const quickLinks = [
-  { href: "/gold", label: "Gold Rate Today", group: "Gold" },
-  { href: "/gold/karachi", label: "Gold Rate — Karachi", group: "Gold" },
-  { href: "/gold/lahore", label: "Gold Rate — Lahore", group: "Gold" },
-  { href: "/currency/usd-to-pkr", label: "USD to PKR", group: "Currency" },
-  { href: "/currency/aed-to-pkr", label: "AED to PKR", group: "Currency" },
-  { href: "/petrol", label: "Petrol Price Today", group: "Fuel" },
-  { href: "/crypto/btc", label: "Bitcoin Price in PKR", group: "Crypto" },
-  { href: "/prize-bonds", label: "Prize Bond Draw Results", group: "Prize Bonds" },
-  { href: "/cement", label: "Cement Rate Today", group: "Cement" },
-  { href: "/steel", label: "Steel / Saria Rate Today", group: "Steel" },
-];
-
+/**
+ * FIX (see lib/search.ts for the full explanation): this
+ * component previously held a hardcoded `quickLinks` array with
+ * hrefs like `/gold/karachi` and `/crypto/btc` that don't exist
+ * as real pages — clicking them 404'd. It now delegates all
+ * matching to `searchPKRates()`, which can only ever return the
+ * 7 routes that actually exist, and renders results through the
+ * same `SearchResultsList` the hero search uses, so "no results"
+ * and "here are your matches" look and behave identically
+ * everywhere in the app.
+ */
 export function CommandSearch() {
   const [open, setOpen] = React.useState(false);
-  const [query, setQuery] = React.useState("");
+  const { query, setQuery, results, activeIndex, handleKeyDown, navigate } =
+    useGlobalSearch(() => setOpen(false));
 
   React.useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {
@@ -33,9 +34,14 @@ export function CommandSearch() {
     return () => window.removeEventListener("keydown", onKeyDown);
   }, []);
 
-  const filtered = quickLinks.filter((l) =>
-    l.label.toLowerCase().includes(query.toLowerCase())
-  );
+  React.useEffect(() => {
+    if (!open) setQuery("");
+  }, [open, setQuery]);
+
+  // Idle state (no query yet) browses all 7 real categories —
+  // the same "show everything by default" behavior the old
+  // static list had, just sourced from the one shared index.
+  const displayResults = query.trim().length === 0 ? getAllCategories() : results;
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -58,6 +64,7 @@ export function CommandSearch() {
             autoFocus
             value={query}
             onChange={(e) => setQuery(e.target.value)}
+            onKeyDown={handleKeyDown}
             placeholder="Search gold, currency, petrol, prize bonds…"
             className="flex-1 bg-transparent text-[15px] text-ink-900 dark:text-ink-100 placeholder:text-ink-400 focus:outline-none"
           />
@@ -66,29 +73,14 @@ export function CommandSearch() {
           </kbd>
         </div>
 
-        <div className="max-h-80 overflow-y-auto p-2">
-          {filtered.length === 0 && (
-            <p className="px-3 py-6 text-center text-sm text-ink-400">
-              No matches for &ldquo;{query}&rdquo;
-            </p>
-          )}
-          {filtered.map((link) => (
-            <Link
-              key={link.href}
-              href={link.href}
-              onClick={() => setOpen(false)}
-              className="flex items-center justify-between rounded-xl px-3.5 py-3 text-sm hover:bg-ink-100 dark:hover:bg-ink-800 transition-colors group"
-            >
-              <span className="flex items-center gap-3">
-                <TrendingUp className="h-3.5 w-3.5 text-pulse-500" />
-                <span className="text-ink-800 dark:text-ink-100">{link.label}</span>
-              </span>
-              <span className="flex items-center gap-2">
-                <span className="text-xs text-ink-400">{link.group}</span>
-                <ArrowRight className="h-3.5 w-3.5 text-ink-300 opacity-0 group-hover:opacity-100 transition-opacity" />
-              </span>
-            </Link>
-          ))}
+        <div className="max-h-80 overflow-y-auto">
+          <SearchResultsList
+            query={query}
+            results={displayResults}
+            activeIndex={activeIndex}
+            onSelect={navigate}
+            className="p-2"
+          />
         </div>
       </DialogContent>
     </Dialog>

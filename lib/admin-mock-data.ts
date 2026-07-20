@@ -15,7 +15,7 @@ export const currentAdminUser: AdminUser = {
   name: "Ayesha Khan",
   email: "ayesha.khan@pkrates.pk",
   role: "reviewer",
-  domains: ["gold", "currency"],
+  domains: ["gold", "silver", "currency"],
   isActive: true,
   lastActive: "Just now",
 };
@@ -34,6 +34,18 @@ export const domainConfigs: Record<string, DomainConfig> = {
     fields: [
       { key: "city", label: "City", type: "select", options: ["Karachi", "Lahore", "Islamabad", "Peshawar", "Quetta"] },
       { key: "karat", label: "Karat", type: "select", options: ["24K", "22K", "21K", "18K"] },
+      { key: "ratePerTola", label: "Rate per Tola", type: "number", suffix: "PKR" },
+    ],
+  },
+  silver: {
+    slug: "silver",
+    title: "Silver Rate Management",
+    description: "City-wise silver (chandi) rates — verified against Sarafa Association boards.",
+    icon: "gem",
+    primaryFieldKey: "ratePerTola",
+    fields: [
+      { key: "city", label: "City", type: "select", options: ["Karachi", "Lahore", "Islamabad", "Peshawar", "Quetta"] },
+      { key: "purity", label: "Purity", type: "select", options: ["999 Fine", "925 Sterling"] },
       { key: "ratePerTola", label: "Rate per Tola", type: "number", suffix: "PKR" },
     ],
   },
@@ -114,6 +126,11 @@ export const publishedRecords: Record<string, PublishedRecord[]> = {
     { id: "g-4", fields: [{ key: "city", value: "Peshawar" }, { key: "karat", value: "24K" }, { key: "ratePerTola", value: "285,700" }], status: "published", sourceName: "Peshawar Sarafa Association", approvedBy: "Ayesha Khan", effectiveAt: "Today, 3:58 PM" },
     { id: "g-5", fields: [{ key: "city", value: "Quetta" }, { key: "karat", value: "24K" }, { key: "ratePerTola", value: "285,450" }], status: "published", sourceName: "Quetta Sarafa Association", approvedBy: "Bilal Ahmed", effectiveAt: "Today, 3:55 PM" },
   ],
+  silver: [
+    { id: "sv-1", fields: [{ key: "city", value: "Karachi" }, { key: "purity", value: "999 Fine" }, { key: "ratePerTola", value: "3,350" }], status: "published", sourceName: "Karachi Sarafa Association", approvedBy: "Ayesha Khan", effectiveAt: "Today, 4:12 PM" },
+    { id: "sv-2", fields: [{ key: "city", value: "Lahore" }, { key: "purity", value: "999 Fine" }, { key: "ratePerTola", value: "3,355" }], status: "published", sourceName: "Lahore Sarafa Association", approvedBy: "Ayesha Khan", effectiveAt: "Today, 4:10 PM" },
+    { id: "sv-3", fields: [{ key: "city", value: "Islamabad" }, { key: "purity", value: "999 Fine" }, { key: "ratePerTola", value: "3,352" }], status: "published", sourceName: "Islamabad Sarafa Association", approvedBy: "Bilal Ahmed", effectiveAt: "Today, 4:09 PM" },
+  ],
   currency: [
     { id: "c-1", fields: [{ key: "currency", value: "USD" }, { key: "rateType", value: "Interbank" }, { key: "buyRate", value: "278.20" }, { key: "sellRate", value: "278.80" }], status: "published", sourceName: "State Bank of Pakistan", approvedBy: "Ayesha Khan", effectiveAt: "Today, 2:30 PM" },
     { id: "c-2", fields: [{ key: "currency", value: "USD" }, { key: "rateType", value: "Open Market" }, { key: "buyRate", value: "278.90" }, { key: "sellRate", value: "279.60" }], status: "published", sourceName: "Forex Association of Pakistan", approvedBy: "Bilal Ahmed", effectiveAt: "Today, 2:15 PM" },
@@ -155,6 +172,25 @@ export const pendingSubmissions: Record<string, Submission[]> = {
       sourceName: "Quetta Sarafa Association",
       submittedBy: "Bilal Ahmed",
       submittedAt: "18 minutes ago",
+      status: "pending",
+    },
+  ],
+  silver: [
+    {
+      id: "sub-sv-1",
+      fields: [{ key: "city", value: "Peshawar" }, { key: "purity", value: "999 Fine" }, { key: "ratePerTola", value: "3,510" }],
+      sourceName: "Peshawar Sarafa Association",
+      submittedBy: "Bilal Ahmed",
+      submittedAt: "6 minutes ago",
+      status: "flagged_anomaly",
+      deviationNote: "+4.5% vs last published value — exceeds 4% auto-review threshold",
+    },
+    {
+      id: "sub-sv-2",
+      fields: [{ key: "city", value: "Quetta" }, { key: "purity", value: "925 Sterling" }, { key: "ratePerTola", value: "3,101" }],
+      sourceName: "Quetta Sarafa Association",
+      submittedBy: "Hamza Tariq",
+      submittedAt: "25 minutes ago",
       status: "pending",
     },
   ],
@@ -205,8 +241,8 @@ export const pendingSubmissions: Record<string, Submission[]> = {
 // Data sources
 // ---------------------------------------------------------------------
 export const dataSources: DataSource[] = [
-  { id: "src-1", name: "Karachi Sarafa Association", type: "association", reliabilityTier: 1, autoPublishAllowed: false, domains: ["gold"], contact: "gold-desk@karachisarafa.pk", lastFedAt: "4 minutes ago" },
-  { id: "src-2", name: "Lahore Sarafa Association", type: "association", reliabilityTier: 1, autoPublishAllowed: false, domains: ["gold"], contact: "info@lahoresarafa.pk", lastFedAt: "6 minutes ago" },
+  { id: "src-1", name: "Karachi Sarafa Association", type: "association", reliabilityTier: 1, autoPublishAllowed: false, domains: ["gold", "silver"], contact: "gold-desk@karachisarafa.pk", lastFedAt: "4 minutes ago" },
+  { id: "src-2", name: "Lahore Sarafa Association", type: "association", reliabilityTier: 1, autoPublishAllowed: false, domains: ["gold", "silver"], contact: "info@lahoresarafa.pk", lastFedAt: "6 minutes ago" },
   { id: "src-3", name: "State Bank of Pakistan", type: "official", reliabilityTier: 1, autoPublishAllowed: true, domains: ["currency"], contact: "forex-data@sbp.org.pk", lastFedAt: "12 minutes ago" },
   { id: "src-4", name: "OGRA", type: "official", reliabilityTier: 1, autoPublishAllowed: true, domains: ["petrol"], contact: "notifications@ogra.org.pk", lastFedAt: "2 days ago" },
   { id: "src-5", name: "National Savings", type: "official", reliabilityTier: 1, autoPublishAllowed: false, domains: ["prize-bonds"], contact: "draws@savings.gov.pk", lastFedAt: "16 hours ago" },
@@ -233,12 +269,12 @@ export const auditLog: AuditLogEntry[] = [
 // Users & roles
 // ---------------------------------------------------------------------
 export const adminUsers: AdminUser[] = [
-  { id: "u-1", name: "Ayesha Khan", email: "ayesha.khan@pkrates.pk", role: "reviewer", domains: ["gold", "currency"], isActive: true, lastActive: "Just now" },
+  { id: "u-1", name: "Ayesha Khan", email: "ayesha.khan@pkrates.pk", role: "reviewer", domains: ["gold", "silver", "currency"], isActive: true, lastActive: "Just now" },
   { id: "u-2", name: "Bilal Ahmed", email: "bilal.ahmed@pkrates.pk", role: "editor", domains: ["gold", "steel", "cement"], isActive: true, lastActive: "12 minutes ago" },
   { id: "u-3", name: "Hamza Tariq", email: "hamza.tariq@pkrates.pk", role: "editor", domains: ["currency", "cement"], isActive: true, lastActive: "40 minutes ago" },
-  { id: "u-4", name: "Sara Malik", email: "sara.malik@pkrates.pk", role: "admin", domains: ["gold", "currency", "petrol", "prize-bonds", "cement", "steel"], isActive: true, lastActive: "1 hour ago" },
+  { id: "u-4", name: "Sara Malik", email: "sara.malik@pkrates.pk", role: "admin", domains: ["gold", "silver", "currency", "petrol", "prize-bonds", "cement", "steel"], isActive: true, lastActive: "1 hour ago" },
   { id: "u-5", name: "Usman Raza", email: "usman.raza@pkrates.pk", role: "analyst", domains: [], isActive: true, lastActive: "Yesterday" },
-  { id: "u-6", name: "Fatima Sheikh", email: "fatima.sheikh@pkrates.pk", role: "super_admin", domains: ["gold", "currency", "petrol", "prize-bonds", "cement", "steel"], isActive: true, lastActive: "3 days ago" },
+  { id: "u-6", name: "Fatima Sheikh", email: "fatima.sheikh@pkrates.pk", role: "super_admin", domains: ["gold", "silver", "currency", "petrol", "prize-bonds", "cement", "steel"], isActive: true, lastActive: "3 days ago" },
 ];
 
 export const rolePermissions: Record<string, string[]> = {

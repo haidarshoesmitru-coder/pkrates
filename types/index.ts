@@ -17,6 +17,19 @@ export interface GoldCityRate {
   sparkline: number[];
 }
 
+/** Mirrors GoldCityRate's shape exactly; Silver is quoted by
+ * fineness (999 fine / 925 sterling) rather than karat in the
+ * Pakistani market, so it has 2 purity fields instead of 4. */
+export interface SilverCityRate {
+  city: string;
+  fine999: number;
+  sterling925: number;
+  changeAmount: number;
+  changePercent: number;
+  trend: TrendDirection;
+  sparkline: number[];
+}
+
 export interface CurrencyRate {
   code: string;
   name: string;

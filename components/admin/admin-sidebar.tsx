@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import {
   LayoutDashboard,
   Coins,
+  Gem,
   Banknote,
   Fuel,
   Ticket,
@@ -42,6 +43,7 @@ const navSections: NavSection[] = [
     label: "Rate Management",
     items: [
       { href: "/admin/gold", label: "Gold", icon: Coins, domain: "gold" },
+      { href: "/admin/silver", label: "Silver", icon: Gem, domain: "silver" },
       { href: "/admin/currency", label: "Currency", icon: Banknote, domain: "currency" },
       { href: "/admin/petrol", label: "Petrol", icon: Fuel, domain: "petrol" },
       { href: "/admin/prize-bonds", label: "Prize Bonds", icon: Ticket, domain: "prize-bonds" },

@@ -10,7 +10,7 @@ create table cement_brands (
 );
 
 create table cement_rates (
-    id uuid primary key default gen_random_uuid(),
+    id uuid primary key default uuid_generate_v4(),
     brand_id smallint not null references cement_brands(id),
     city_id smallint not null references cities(id),
     price_per_bag numeric(14,2) not null check (price_per_bag > 0),
@@ -28,7 +28,7 @@ create index idx_cement_rates_lookup on cement_rates (brand_id, city_id, effecti
 create index idx_cement_rates_status on cement_rates (status) where status = 'published';
 
 create table cement_rate_submissions (
-    id uuid primary key default gen_random_uuid(),
+    id uuid primary key default uuid_generate_v4(),
     brand_id smallint not null references cement_brands(id),
     city_id smallint not null references cities(id),
     price_per_bag numeric(14,2) not null check (price_per_bag > 0),

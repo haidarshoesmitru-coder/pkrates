@@ -8,7 +8,7 @@
 -- Sources
 -- ---------------------------------------------------------
 create table sources (
-    id uuid primary key default gen_random_uuid(),
+    id uuid primary key default uuid_generate_v4(),
     name text not null,
     type text not null check (type in
         ('official','association','exchange_api','dealer_network','manual_field_team')),
@@ -93,7 +93,7 @@ create index idx_audit_logs_performed_by on audit_logs (performed_by);
 -- Rate verification log
 -- ---------------------------------------------------------
 create table rate_verifications (
-    id uuid primary key default gen_random_uuid(),
+    id uuid primary key default uuid_generate_v4(),
     domain text not null,
     submission_table text not null,
     submission_id uuid not null,

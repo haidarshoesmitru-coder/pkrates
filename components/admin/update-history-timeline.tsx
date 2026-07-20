@@ -1,9 +1,10 @@
-import { Coins, Banknote, Fuel, Ticket, Package, Layers, type LucideIcon } from "lucide-react";
+import { Coins, Gem, Banknote, Fuel, Ticket, Package, Layers, type LucideIcon } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { publishedRecords, domainConfigs } from "@/lib/admin-mock-data";
 
 const iconMap: Record<string, LucideIcon> = {
   coins: Coins,
+  gem: Gem,
   banknote: Banknote,
   fuel: Fuel,
   ticket: Ticket,

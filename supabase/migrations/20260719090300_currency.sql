@@ -12,7 +12,7 @@ create table currencies (
 );
 
 create table currency_rates (
-    id uuid primary key default gen_random_uuid(),
+    id uuid primary key default uuid_generate_v4(),
     currency_id smallint not null references currencies(id),
     rate_type text not null check (rate_type in ('interbank','open_market')),
     buy_rate numeric(14,4) not null check (buy_rate > 0),
@@ -32,7 +32,7 @@ create index idx_currency_rates_lookup on currency_rates (currency_id, rate_type
 create index idx_currency_rates_status on currency_rates (status) where status = 'published';
 
 create table currency_rate_submissions (
-    id uuid primary key default gen_random_uuid(),
+    id uuid primary key default uuid_generate_v4(),
     currency_id smallint not null references currencies(id),
     rate_type text not null check (rate_type in ('interbank','open_market')),
     buy_rate numeric(14,4) not null check (buy_rate > 0),

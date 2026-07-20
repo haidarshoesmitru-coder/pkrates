@@ -10,7 +10,7 @@ create table steel_grades (
 );
 
 create table steel_rates (
-    id uuid primary key default gen_random_uuid(),
+    id uuid primary key default uuid_generate_v4(),
     grade_id smallint not null references steel_grades(id),
     city_id smallint not null references cities(id),
     price_per_maund numeric(14,2) not null check (price_per_maund > 0),
@@ -29,7 +29,7 @@ create index idx_steel_rates_lookup on steel_rates (grade_id, city_id, effective
 create index idx_steel_rates_status on steel_rates (status) where status = 'published';
 
 create table steel_rate_submissions (
-    id uuid primary key default gen_random_uuid(),
+    id uuid primary key default uuid_generate_v4(),
     grade_id smallint not null references steel_grades(id),
     city_id smallint not null references cities(id),
     price_per_maund numeric(14,2) not null check (price_per_maund > 0),

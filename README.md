@@ -248,6 +248,91 @@ condition, without changing any table or business rule.
 
 See `supabase/README.md` for full migration-by-migration detail.
 
+## v1.6 — Global Search Fix (no UI redesign)
+
+Fixes a real bug found during review: the ⌘K command palette
+(`components/layout/command-search.tsx`) had a hardcoded quick-link list
+including hrefs like `/gold/karachi`, `/gold/lahore`, `/currency/usd-to-pkr`,
+`/currency/aed-to-pkr`, and `/crypto/btc` — none of which are real routes
+(only the 7 flat category pages exist). Clicking any of those 404'd. The
+homepage hero search input had no logic behind it at all — pure decoration.
+
+**New:** `lib/search.ts` — a single intent-detection engine, typed so it can
+*only* ever return one of the 7 real routes (`ExistingRoute` is a literal
+union, not `string`— assigning a href outside that set is a compile error,
+not just a convention). Keywords are pulled from the existing mock data
+(currency codes, crypto symbols, cement brands, steel grades, gold/cement/
+steel cities) rather than re-typed, so search can't silently drift out of
+sync with what the app actually shows. Generic words ("rate", "price",
+"today") are excluded from matching — this is specifically what makes
+"Silver Rate" correctly resolve to "No results found" rather than a false
+match on "Gold Rate" (both share the word "rate"; only "gold" is a real
+distinguishing keyword).
+
+**New shared pieces**, reused by both search entry points so behavior can't
+diverge: `components/shared/use-global-search.ts` (query state, ranked
+results, arrow-key navigation, Enter-to-navigate — which is a no-op, not a
+guess, when there are zero results) and
+`components/shared/search-results-list.tsx` (the suggestion list / "No
+results found" rendering, styled with the same tokens already used
+elsewhere — no new visual language introduced).
+
+**Changed:** `command-search.tsx` (replaced the hardcoded broken list with
+the engine; idle state still browses all 7 categories, matching the
+original's default behavior) and `hero-section.tsx` (the search input went
+from fully decorative to functional — same markup/classes, now with real
+state, keyboard nav, and an autocomplete dropdown). No other visual element
+on either component changed; the "View All Rates" button next to the hero
+search was deliberately left as-is since it isn't part of the search system.
+
+## v1.7 — Silver (Chandi) Category
+
+Added as a full production category, built only after reviewing the entire
+existing architecture first — every piece below reuses an existing system
+rather than introducing a parallel one for Silver.
+
+**Database (3 new migrations, all additive):** `silver_purities` /
+`silver_rates` / `silver_rate_submissions` mirror Gold's three-table shape
+exactly (`purity` in place of `karat`). Silver is wired into every existing
+cross-cutting system via `create or replace function` patches to the
+functions that already existed — not new parallel versions: the
+materialized-view refresh whitelist, the scheduled `pg_cron` batch refresh,
+the publish-notify trigger's table→view mapping, and RLS. Anomaly detection
+reuses `evaluate_rate_deviation()` and `record_rate_verification()`
+unchanged, at the same 4% threshold as Gold (same asset class, same
+volatility profile). The `user_domain_access.domain` CHECK constraint (the
+one closed enum in the whole schema) was the only constraint needing
+`silver` added — found by reviewing every migration for closed domain lists
+before writing any code.
+
+**Source reuse, not duplication:** the same Karachi/Lahore/Islamabad/
+Peshawar/Quetta Sarafa Associations that already verify Gold also verify
+Silver in the real market — the seed migration `UPDATE`s their existing
+`sources.domains` array to add `'silver'` rather than inserting 5 near-
+duplicate source rows.
+
+**Frontend:** one new public page (`/silver`, structurally identical to
+`/gold`, includes OpenGraph metadata — confirmed no page had this yet, so
+it's scoped to this page only, not retrofitted onto Gold), one new admin
+page (8 lines, pure `RateDomainAdmin` reuse), and a `SilverCityRate` type
+(2 purity tiers instead of Gold's 4 karats — the real Pakistani silver
+market convention). Everything else — the homepage card, related-categories
+sections, search, and the sitemap — required *zero* new components, because
+they already read generically from the `categories` array in
+`lib/mock-data.ts`; adding one entry to that array is what surfaces Silver
+in all of them at once.
+
+**New:** `app/sitemap.ts` — confirmed no sitemap existed anywhere in v1.6
+(a known gap from the earlier production-readiness audit). Built once,
+site-wide, generated from the same `categories` array so it never needs a
+category-specific edit again.
+
+**A stale comment fixed, not a redesign:** `lib/search.ts` used "Silver
+Rate" as its worked example of a query that correctly returns "No results
+found" (Silver didn't exist yet). Now that it's real, that comment would be
+factually wrong, so it was swapped to "Platinum" — which genuinely still
+has no PKRates page.
+
 ## Notes for Phase 2
 
 - Replace `lib/mock-data.ts` reads with server-side Supabase queries against the

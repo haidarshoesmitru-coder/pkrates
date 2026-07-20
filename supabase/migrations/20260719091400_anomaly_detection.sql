@@ -195,7 +195,7 @@ begin
     end if;
 
     -- NEW.id is already populated at this point -- column defaults
-    -- (including gen_random_uuid()) resolve before a BEFORE INSERT
+    -- (including uuid_generate_v4()) resolve before a BEFORE INSERT
     -- trigger runs, so it's safe to reference here.
     perform record_rate_verification('gold', 'gold_rate_submissions', NEW.id, v_deviation, v_anomalous, v_reason, NEW.source_id);
 

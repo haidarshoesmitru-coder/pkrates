@@ -1,10 +1,12 @@
 import type {
   GoldCityRate,
+  SilverCityRate,
   CurrencyRate,
   FuelPrice,
   PrizeBondDraw,
   Mover,
   CategoryCard,
+  TrendDirection,
 } from "@/types";
 
 export const lastUpdated = "Today, 4:12 PM PKT";
@@ -192,6 +194,7 @@ export const biggestMovers: Mover[] = [
 
 export const categories: CategoryCard[] = [
   { slug: "gold", title: "Gold Rates", description: "24K, 22K, 21K & 18K — city-wise, updated through the day.", headlineValue: "285,500", headlineLabel: "Rs / tola · 24K Karachi", trend: "up", icon: "coins" },
+  { slug: "silver", title: "Silver Rates", description: "999 Fine & 925 Sterling — city-wise, updated through the day.", headlineValue: "3,350", headlineLabel: "Rs / tola · 999 Fine, Karachi", trend: "up", icon: "gem" },
   { slug: "currency", title: "Currency Rates", description: "Interbank & open market — buy/sell for 15+ currencies.", headlineValue: "278.80", headlineLabel: "USD / PKR · Interbank sell", trend: "up", icon: "banknote" },
   { slug: "petrol", title: "Petrol Prices", description: "Official OGRA-notified fuel prices, with change history.", headlineValue: "272.50", headlineLabel: "Rs / litre · Petrol", trend: "up", icon: "fuel" },
   { slug: "crypto", title: "Crypto Prices", description: "Top coins priced live in PKR and USD.", headlineValue: "24.2M", headlineLabel: "Rs · Bitcoin (BTC)", trend: "up", icon: "bitcoin" },
@@ -201,7 +204,7 @@ export const categories: CategoryCard[] = [
 ];
 
 export const trustSources = [
-  { name: "Karachi Sarafa Association", role: "Gold rate verification" },
+  { name: "Karachi Sarafa Association", role: "Gold & silver rate verification" },
   { name: "State Bank of Pakistan", role: "Interbank currency data" },
   { name: "OGRA", role: "Official fuel price notifications" },
   { name: "National Savings", role: "Prize bond draw results" },
@@ -319,6 +322,65 @@ export const goldFAQs = [
   { question: "How often are gold rates updated?", answer: "Gold rates are checked and updated multiple times a day, verified against city Sarafa Association boards, especially during periods of price volatility." },
   { question: "Why do gold rates differ by city?", answer: "Local Sarafa Associations set rates independently based on regional demand, dealer margins, and logistics, which is why Karachi, Lahore, Islamabad, Peshawar, and Quetta can show slightly different figures on the same day." },
   { question: "What's the difference between 24K, 22K, 21K, and 18K gold?", answer: "The karat number reflects gold purity — 24K is nearly pure gold (99.9%), while 22K, 21K, and 18K contain progressively more alloy metals for durability, which is why their rates are proportionally lower." },
+];
+
+// ---------------------------------------------------------
+// Silver (Chandi) — mirrors the Gold data shapes exactly
+// (goldRates / goldHistoryByRange / goldComparison / goldFAQs),
+// same city set, same per-tola/10g/gram convention.
+// ---------------------------------------------------------
+export const silverRates: SilverCityRate[] = [
+  { city: "Karachi", fine999: 3350, sterling925: 3102, changeAmount: 18, changePercent: 0.54, trend: "up", sparkline: [3280, 3295, 3310, 3300, 3325, 3338, 3350] },
+  { city: "Lahore", fine999: 3355, sterling925: 3107, changeAmount: 18, changePercent: 0.54, trend: "up", sparkline: [3285, 3300, 3315, 3305, 3330, 3343, 3355] },
+  { city: "Islamabad", fine999: 3352, sterling925: 3104, changeAmount: 18, changePercent: 0.54, trend: "up", sparkline: [3282, 3297, 3312, 3302, 3327, 3340, 3352] },
+  { city: "Peshawar", fine999: 3360, sterling925: 3111, changeAmount: 20, changePercent: 0.60, trend: "up", sparkline: [3278, 3294, 3308, 3298, 3324, 3341, 3360] },
+  { city: "Quetta", fine999: 3345, sterling925: 3097, changeAmount: 17, changePercent: 0.51, trend: "up", sparkline: [3276, 3290, 3305, 3296, 3320, 3333, 3345] },
+];
+
+export const silverHistoryByRange: Record<string, Record<"1D" | "7D" | "1M" | "1Y", number[]>> = {
+  Karachi: {
+    "1D": [3330, 3335, 3332, 3340, 3345, 3342, 3350],
+    "7D": [3280, 3295, 3310, 3300, 3325, 3338, 3350],
+    "1M": [3180, 3210, 3245, 3225, 3270, 3305, 3350],
+    "1Y": [2540, 2680, 2830, 2790, 3040, 3190, 3350],
+  },
+  Lahore: {
+    "1D": [3335, 3340, 3337, 3345, 3350, 3347, 3355],
+    "7D": [3285, 3300, 3315, 3305, 3330, 3343, 3355],
+    "1M": [3185, 3215, 3250, 3230, 3275, 3310, 3355],
+    "1Y": [2545, 2685, 2835, 2795, 3045, 3195, 3355],
+  },
+  Islamabad: {
+    "1D": [3332, 3337, 3334, 3342, 3347, 3344, 3352],
+    "7D": [3282, 3297, 3312, 3302, 3327, 3340, 3352],
+    "1M": [3182, 3212, 3247, 3227, 3272, 3307, 3352],
+    "1Y": [2542, 2682, 2832, 2792, 3042, 3192, 3352],
+  },
+  Peshawar: {
+    "1D": [3340, 3346, 3341, 3350, 3355, 3350, 3360],
+    "7D": [3278, 3294, 3308, 3298, 3324, 3341, 3360],
+    "1M": [3178, 3208, 3243, 3223, 3268, 3303, 3360],
+    "1Y": [2538, 2678, 2828, 2788, 3038, 3188, 3360],
+  },
+  Quetta: {
+    "1D": [3325, 3330, 3327, 3335, 3340, 3337, 3345],
+    "7D": [3276, 3290, 3305, 3296, 3320, 3333, 3345],
+    "1M": [3176, 3206, 3241, 3221, 3266, 3301, 3345],
+    "1Y": [2536, 2676, 2826, 2786, 3036, 3186, 3345],
+  },
+};
+
+export const silverComparison = {
+  vsYesterday: { amount: 18, percent: 0.54 },
+  vsLastWeek: { amount: 70, percent: 2.13 },
+  vsLastMonth: { amount: 170, percent: 5.35 },
+};
+
+export const silverFAQs = [
+  { question: "What is today's silver (chandi) rate in Pakistan?", answer: "Today's 999 fine silver rate is Rs 3,350 per tola in Karachi, with minor city-wise variation. Rates are shown per tola, per 10 grams, and per gram for both 999 fine and 925 sterling silver." },
+  { question: "How often are silver rates updated?", answer: "Silver rates are checked and updated multiple times a day by the same city Sarafa Associations that verify gold rates, especially during periods of price volatility." },
+  { question: "What's the difference between 999 fine and 925 sterling silver?", answer: "999 fine silver is nearly pure silver (99.9%), while 925 sterling silver contains about 92.5% silver alloyed with other metals for added durability, which is why its rate is proportionally lower." },
+  { question: "Why do silver rates differ by city?", answer: "Local Sarafa Associations set rates independently based on regional demand, dealer margins, and logistics — the same dynamic that causes gold rates to vary slightly between Karachi, Lahore, Islamabad, Peshawar, and Quetta." },
 ];
 
 export const currencyFAQs = [

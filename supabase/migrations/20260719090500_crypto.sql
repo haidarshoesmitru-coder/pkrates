@@ -14,7 +14,7 @@ create table crypto_coins (
 );
 
 create table crypto_rates (
-    id uuid primary key default gen_random_uuid(),
+    id uuid primary key default uuid_generate_v4(),
     coin_id smallint not null references crypto_coins(id),
     price_usd numeric(18,6) not null check (price_usd > 0),
     usd_pkr_rate_used numeric(14,4) not null check (usd_pkr_rate_used > 0),
