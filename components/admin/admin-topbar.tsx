@@ -31,7 +31,8 @@ async function getCurrentAdminIdentity() {
       name: row.full_name,
       role: (row.roles?.name ?? "admin") as UserRole,
     };
-  } catch {
+  } catch (err) {
+    console.error("[admin-topbar identity error]", err);
     return { name: "Admin", role: "admin" as UserRole };
   }
 }
