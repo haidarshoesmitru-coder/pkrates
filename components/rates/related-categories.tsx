@@ -1,10 +1,10 @@
 import Link from "next/link";
 import { ArrowUpRight } from "lucide-react";
 import { SectionHeading } from "@/components/shared/section-heading";
-import { categories } from "@/lib/mock-data";
+import { CATEGORY_META } from "@/lib/categories-static";
 
 export function RelatedCategories({ excludeSlug }: { excludeSlug: string }) {
-  const related = categories.filter((c) => c.slug !== excludeSlug);
+  const related = CATEGORY_META.filter((c) => c.slug !== excludeSlug);
 
   return (
     <section>

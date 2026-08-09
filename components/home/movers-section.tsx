@@ -3,7 +3,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { DeltaBadge } from "@/components/shared/delta-badge";
 import { SectionHeading } from "@/components/shared/section-heading";
-import { biggestMovers } from "@/lib/mock-data";
+import type { Mover } from "@/types";
 
 const categoryTint: Record<string, string> = {
   Gold: "text-gold-600 dark:text-gold-400",
@@ -13,9 +13,9 @@ const categoryTint: Record<string, string> = {
   Steel: "text-ink-600 dark:text-ink-300",
 };
 
-export function MoversSection() {
-  const gainers = biggestMovers.filter((m) => m.trend === "up");
-  const losers = biggestMovers.filter((m) => m.trend === "down");
+export function MoversSection({ movers }: { movers: Mover[] }) {
+  const gainers = movers.filter((m) => m.trend === "up");
+  const losers = movers.filter((m) => m.trend === "down");
 
   return (
     <section className="border-t border-ink-200 dark:border-ink-800 bg-[var(--surface-muted)]">

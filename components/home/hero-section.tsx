@@ -10,9 +10,14 @@ import { ShareButton } from "@/components/shared/share-button";
 import { WatchlistButton } from "@/components/shared/watchlist-button";
 import { SearchResultsList } from "@/components/shared/search-results-list";
 import { useGlobalSearch } from "@/components/shared/use-global-search";
-import { lastUpdated } from "@/lib/mock-data";
+import { formatPKR, formatDelta } from "@/lib/utils";
 
-export function HeroSection() {
+export interface HeroSectionProps {
+  lastUpdated: string;
+  goldKarachi24k: { ratePerTola: number; weeklyChangePercent: number };
+}
+
+export function HeroSection({ lastUpdated, goldKarachi24k }: HeroSectionProps) {
   const [isSearchFocused, setIsSearchFocused] = React.useState(false);
   const { query, setQuery, results, activeIndex, handleKeyDown, navigate } =
     useGlobalSearch(() => setIsSearchFocused(false));
@@ -134,23 +139,23 @@ export function HeroSection() {
                 Gold 24K &middot; Karachi
               </span>
               <div className="flex items-center gap-0.5">
-                <ShareButton title="Gold 24K — Karachi" text="Gold 24K in Karachi: Rs 285,500 per tola on PKRates" />
+                <ShareButton title="Gold 24K — Karachi" text={`Gold 24K in Karachi: Rs ${formatPKR(goldKarachi24k.ratePerTola)} per tola on PKRates`} />
                 <WatchlistButton id="hero-gold-24k-karachi" />
               </div>
             </div>
             <div className="mt-3 flex items-baseline gap-2">
               <span className="font-rate text-4xl font-semibold text-ink-950 dark:text-white">
-                Rs 285,500
+                Rs {formatPKR(goldKarachi24k.ratePerTola)}
               </span>
             </div>
-            <p className="mt-1 text-xs text-ink-400">per tola &middot; verified 4 min ago</p>
+            <p className="mt-1 text-xs text-ink-400">per tola &middot; updated {lastUpdated}</p>
             <div className="mt-5 text-pulse-600 dark:text-pulse-400">
               <PulseLine className="h-16 w-full" />
             </div>
             <div className="mt-2 flex items-center justify-between text-xs">
               <span className="text-ink-400">7-day trend</span>
               <span className="font-rate font-medium text-rise-600 dark:text-pulse-400">
-                +2.26% this week
+                {formatDelta(goldKarachi24k.weeklyChangePercent)} this week
               </span>
             </div>
           </motion.div>

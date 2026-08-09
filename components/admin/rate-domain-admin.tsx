@@ -1,20 +1,10 @@
 "use client";
 
 import * as React from "react";
+import { useRouter } from "next/navigation";
 import {
-  Coins, Gem,
-  Banknote,
-  Fuel,
-  Ticket,
-  Package,
-  Layers,
-  type LucideIcon,
-  Plus,
-  Check,
-  X,
-  ShieldAlert,
-  FileCheck2,
-  Clock,
+  Coins, Gem, Banknote, Fuel, Ticket, Package, Layers, type LucideIcon,
+  Plus, Check, X, ShieldAlert, FileCheck2, Clock, Loader2, AlertTriangle,
 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -22,27 +12,15 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { StatusPill } from "@/components/admin/status-pill";
 import { cn } from "@/lib/utils";
-import {
-  domainConfigs,
-  publishedRecords as initialPublished,
-  pendingSubmissions as initialPending,
-  dataSources,
-  auditLog,
-  currentAdminUser,
-} from "@/lib/admin-mock-data";
-import type { FieldValue, PublishedRecord, Submission } from "@/types/admin";
+import { domainConfigs } from "@/lib/domain-config";
+import { submitRateAction, approveSubmissionAction, rejectSubmissionAction } from "@/lib/data/admin-actions";
+import type { PublishedRecord, Submission } from "@/types/admin";
 
 const iconMap: Record<string, LucideIcon> = {
-  coins: Coins,
-  gem: Gem,
-  banknote: Banknote,
-  fuel: Fuel,
-  ticket: Ticket,
-  package: Package,
-  layers: Layers,
+  coins: Coins, gem: Gem, banknote: Banknote, fuel: Fuel, ticket: Ticket, package: Package, layers: Layers,
 };
 
-interface LocalHistoryEntry {
+interface HistoryEntry {
   id: string;
   summary: string;
   action: "insert" | "approve" | "reject";
@@ -51,93 +29,78 @@ interface LocalHistoryEntry {
   notes?: string;
 }
 
-function fieldSummary(fields: FieldValue[]) {
-  return fields.map((f) => f.value).join(" · ");
+export interface RateDomainAdminProps {
+  domain: string;
+  published: PublishedRecord[];
+  pending: Submission[];
+  sources: { id: string; name: string }[];
+  history: HistoryEntry[];
+  currentUserName: string;
+  /** True if data failed to load server-side — renders an error
+   * state instead of an empty "all caught up" state, so the two
+   * are never confused. */
+  loadError?: boolean;
 }
 
-export function RateDomainAdmin({ domain }: { domain: string }) {
+export function RateDomainAdmin({
+  domain, published, pending, sources, history, currentUserName, loadError,
+}: RateDomainAdminProps) {
+  const router = useRouter();
   const config = domainConfigs[domain];
   const Icon = iconMap[config.icon] ?? Coins;
-  const domainSources = dataSources.filter((s) => s.domains.includes(domain));
-  const domainAuditHistory = auditLog.filter((a) => a.domain === domain);
 
-  const [published, setPublished] = React.useState<PublishedRecord[]>(initialPublished[domain] ?? []);
-  const [pending, setPending] = React.useState<Submission[]>(initialPending[domain] ?? []);
-  const [localHistory, setLocalHistory] = React.useState<LocalHistoryEntry[]>([]);
   const [showForm, setShowForm] = React.useState(false);
   const [formValues, setFormValues] = React.useState<Record<string, string>>({});
-  const [formSource, setFormSource] = React.useState(domainSources[0]?.name ?? "");
+  const [formSourceId, setFormSourceId] = React.useState(sources[0]?.id ?? "");
   const [reviewNotes, setReviewNotes] = React.useState<Record<string, string>>({});
+  const [pendingActionId, setPendingActionId] = React.useState<string | null>(null);
+  const [actionError, setActionError] = React.useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = React.useState(false);
 
   function handleFieldChange(key: string, value: string) {
     setFormValues((prev) => ({ ...prev, [key]: value }));
   }
 
-  function handleSubmitNew(e: React.FormEvent) {
+  async function handleSubmitNew(e: React.FormEvent) {
     e.preventDefault();
-    const fields: FieldValue[] = config.fields.map((f) => ({
-      key: f.key,
-      value: formValues[f.key] ?? "",
-    }));
-    const newSubmission: Submission = {
-      id: `sub-new-${Date.now()}`,
-      fields,
-      sourceName: formSource,
-      submittedBy: currentAdminUser.name,
-      submittedAt: "Just now",
-      status: "pending",
-    };
-    setPending((prev) => [newSubmission, ...prev]);
-    setLocalHistory((prev) => [
-      {
-        id: `h-${Date.now()}`,
-        summary: `${fieldSummary(fields)} submitted for review`,
-        action: "insert",
-        by: currentAdminUser.name,
-        at: "Just now",
-      },
-      ...prev,
-    ]);
-    setFormValues({});
-    setShowForm(false);
+    setActionError(null);
+    setIsSubmitting(true);
+    try {
+      await submitRateAction(domain, formValues, formSourceId);
+      setFormValues({});
+      setShowForm(false);
+      router.refresh();
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : "Failed to submit — please try again.");
+    } finally {
+      setIsSubmitting(false);
+    }
   }
 
-  function handleApprove(sub: Submission) {
-    const newRecord: PublishedRecord = {
-      id: `pub-${sub.id}`,
-      fields: sub.fields,
-      status: "published",
-      sourceName: sub.sourceName,
-      approvedBy: currentAdminUser.name,
-      effectiveAt: "Just now",
-    };
-    setPublished((prev) => [newRecord, ...prev]);
-    setPending((prev) => prev.filter((p) => p.id !== sub.id));
-    setLocalHistory((prev) => [
-      {
-        id: `h-${Date.now()}`,
-        summary: `${fieldSummary(sub.fields)} approved`,
-        action: "approve",
-        by: currentAdminUser.name,
-        at: "Just now",
-      },
-      ...prev,
-    ]);
+  async function handleApprove(sub: Submission) {
+    setActionError(null);
+    setPendingActionId(sub.id);
+    try {
+      await approveSubmissionAction(domain, sub.id);
+      router.refresh();
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : "Failed to approve — please try again.");
+    } finally {
+      setPendingActionId(null);
+    }
   }
 
-  function handleReject(sub: Submission) {
-    setPending((prev) => prev.filter((p) => p.id !== sub.id));
-    setLocalHistory((prev) => [
-      {
-        id: `h-${Date.now()}`,
-        summary: `${fieldSummary(sub.fields)} rejected`,
-        action: "reject",
-        by: currentAdminUser.name,
-        at: "Just now",
-        notes: reviewNotes[sub.id],
-      },
-      ...prev,
-    ]);
+  async function handleReject(sub: Submission) {
+    setActionError(null);
+    setPendingActionId(sub.id);
+    try {
+      await rejectSubmissionAction(domain, sub.id, reviewNotes[sub.id] ?? "");
+      router.refresh();
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : "Failed to reject — please try again.");
+    } finally {
+      setPendingActionId(null);
+    }
   }
 
   return (
@@ -160,6 +123,15 @@ export function RateDomainAdmin({ domain }: { domain: string }) {
           New Submission
         </Button>
       </div>
+
+      {actionError && (
+        <Card className="p-4 border-fall-500/40 bg-red-50 dark:bg-red-950/30">
+          <div className="flex items-start gap-2.5">
+            <AlertTriangle className="h-4 w-4 text-fall-500 shrink-0 mt-0.5" />
+            <p className="text-sm text-fall-700 dark:text-red-300">{actionError}</p>
+          </div>
+        </Card>
+      )}
 
       {/* Submit form */}
       {showForm && (
@@ -209,21 +181,23 @@ export function RateDomainAdmin({ domain }: { domain: string }) {
               </label>
               <select
                 required
-                value={formSource}
-                onChange={(e) => setFormSource(e.target.value)}
+                value={formSourceId}
+                onChange={(e) => setFormSourceId(e.target.value)}
                 className="h-10 w-full rounded-lg border border-ink-200 dark:border-ink-700 bg-[var(--surface)] px-3 text-sm focus:outline-none focus:ring-2 focus:ring-pulse-500/60"
               >
-                {domainSources.map((s) => (
-                  <option key={s.id} value={s.name}>{s.name}</option>
+                {sources.length === 0 && <option value="">No sources configured for this domain</option>}
+                {sources.map((s) => (
+                  <option key={s.id} value={s.id}>{s.name}</option>
                 ))}
               </select>
             </div>
 
             <div className="sm:col-span-2 flex items-center justify-end gap-2 pt-2">
-              <Button type="button" variant="ghost" onClick={() => setShowForm(false)}>
+              <Button type="button" variant="ghost" onClick={() => setShowForm(false)} disabled={isSubmitting}>
                 Cancel
               </Button>
-              <Button type="submit">
+              <Button type="submit" disabled={isSubmitting || sources.length === 0}>
+                {isSubmitting && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
                 Submit for Review
               </Button>
             </div>
@@ -243,7 +217,16 @@ export function RateDomainAdmin({ domain }: { domain: string }) {
 
         {/* Published */}
         <TabsContent value="published">
+          {loadError ? (
+            <Card className="p-10 text-center border-fall-500/40">
+              <AlertTriangle className="h-6 w-6 mx-auto text-fall-500" />
+              <p className="mt-3 text-sm text-ink-500 dark:text-ink-400">
+                Couldn&rsquo;t load published rates. Please refresh the page.
+              </p>
+            </Card>
+          ) : (
           <Card className="overflow-hidden">
+            <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-ink-200 dark:border-ink-800 bg-ink-50 dark:bg-ink-900 text-left text-xs uppercase tracking-wide text-ink-400">
@@ -279,13 +262,15 @@ export function RateDomainAdmin({ domain }: { domain: string }) {
                 )}
               </tbody>
             </table>
+            </div>
           </Card>
+          )}
         </TabsContent>
 
         {/* Review queue */}
         <TabsContent value="review">
           <div className="space-y-4">
-            {pending.length === 0 && (
+            {pending.length === 0 && !loadError && (
               <Card className="p-10 text-center">
                 <FileCheck2 className="h-6 w-6 mx-auto text-pulse-500" />
                 <p className="mt-3 text-sm text-ink-500 dark:text-ink-400">
@@ -294,7 +279,8 @@ export function RateDomainAdmin({ domain }: { domain: string }) {
               </Card>
             )}
             {pending.map((sub) => {
-              const isOwnSubmission = sub.submittedBy === currentAdminUser.name;
+              const isOwnSubmission = sub.submittedBy === currentUserName;
+              const isBusy = pendingActionId === sub.id;
               return (
                 <Card key={sub.id} className="p-5">
                   <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
@@ -335,19 +321,20 @@ export function RateDomainAdmin({ domain }: { domain: string }) {
                       <Button
                         size="sm"
                         onClick={() => handleApprove(sub)}
-                        disabled={isOwnSubmission}
+                        disabled={isOwnSubmission || isBusy}
                         className="flex-1 sm:flex-none"
                       >
-                        <Check className="h-3.5 w-3.5" />
+                        {isBusy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />}
                         Approve
                       </Button>
                       <Button
                         size="sm"
                         variant="outline"
                         onClick={() => handleReject(sub)}
+                        disabled={isBusy}
                         className="flex-1 sm:flex-none border-fall-500/40 text-fall-600 hover:bg-red-50 dark:hover:bg-red-950/30"
                       >
-                        <X className="h-3.5 w-3.5" />
+                        {isBusy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <X className="h-3.5 w-3.5" />}
                         Reject
                       </Button>
                     </div>
@@ -367,14 +354,10 @@ export function RateDomainAdmin({ domain }: { domain: string }) {
         {/* History */}
         <TabsContent value="history">
           <Card className="divide-y divide-ink-200 dark:divide-ink-800">
-            {[...localHistory, ...domainAuditHistory.map((a) => ({
-              id: a.id,
-              summary: a.summary,
-              action: a.action as "insert" | "approve" | "reject",
-              by: a.performedBy,
-              at: a.performedAt,
-              notes: a.notes,
-            }))].map((entry) => (
+            {history.length === 0 && (
+              <p className="px-5 py-10 text-center text-sm text-ink-400">No activity recorded yet.</p>
+            )}
+            {history.map((entry) => (
               <div key={entry.id} className="flex items-start gap-3 px-5 py-4">
                 <span
                   className={cn(
@@ -405,7 +388,8 @@ export function RateDomainAdmin({ domain }: { domain: string }) {
 
       <div className="flex flex-wrap items-center gap-2">
         <span className="text-xs text-ink-400">Sources feeding this domain:</span>
-        {domainSources.map((s) => (
+        {sources.length === 0 && <span className="text-xs text-ink-400">None configured</span>}
+        {sources.map((s) => (
           <Badge key={s.id} variant="outline">{s.name}</Badge>
         ))}
       </div>

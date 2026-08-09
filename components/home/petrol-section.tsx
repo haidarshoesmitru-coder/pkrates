@@ -3,9 +3,9 @@ import { Card } from "@/components/ui/card";
 import { DeltaBadge } from "@/components/shared/delta-badge";
 import { SectionHeading } from "@/components/shared/section-heading";
 import { formatPKR } from "@/lib/utils";
-import { fuelPrices } from "@/lib/mock-data";
+import type { FuelPrice } from "@/types";
 
-export function PetrolSection() {
+export function PetrolSection({ prices }: { prices: FuelPrice[] }) {
   return (
     <section className="border-t border-ink-200 dark:border-ink-800 bg-[var(--surface-muted)]">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-14 sm:py-20">
@@ -15,8 +15,11 @@ export function PetrolSection() {
           description="Sourced directly from OGRA notifications — with the full change history, not just today's number."
         />
 
+        {prices.length === 0 ? (
+          <p className="mt-8 text-sm text-ink-400">Petrol prices are temporarily unavailable.</p>
+        ) : (
         <div className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-4">
-          {fuelPrices.map((fuel) => (
+          {prices.map((fuel) => (
             <Card key={fuel.type} className="p-6">
               <div className="flex items-center justify-between">
                 <span className="flex h-9 w-9 items-center justify-center rounded-full bg-ink-100 dark:bg-ink-800 text-pulse-600 dark:text-pulse-400">
@@ -45,6 +48,7 @@ export function PetrolSection() {
             </Card>
           ))}
         </div>
+        )}
       </div>
     </section>
   );

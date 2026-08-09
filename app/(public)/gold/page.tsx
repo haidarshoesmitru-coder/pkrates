@@ -8,7 +8,10 @@ import { Card } from "@/components/ui/card";
 import { DeltaBadge } from "@/components/shared/delta-badge";
 import { WatchlistButton } from "@/components/shared/watchlist-button";
 import { formatPKR } from "@/lib/utils";
-import { goldRates, goldComparison, goldFAQs, lastUpdated } from "@/lib/mock-data";
+import { getGoldRates, computeLastUpdatedLabel } from "@/lib/data/rates";
+import { getComparison } from "@/lib/data/history";
+import { getGoldKarats, getCities } from "@/lib/data/reference";
+import { goldFAQs } from "@/lib/faq-content";
 
 export const metadata: Metadata = {
   title: "Gold Rate Today in Pakistan — 24K, 22K, 21K, 18K | PKRates",
@@ -16,7 +19,32 @@ export const metadata: Metadata = {
     "Live gold rates today across Karachi, Lahore, Islamabad, Peshawar and Quetta — 24K, 22K, 21K and 18K, per tola and per gram, verified against Sarafa Association boards.",
 };
 
-export default function GoldRatesPage() {
+export default async function GoldRatesPage() {
+  const goldRates = await getGoldRates();
+
+  if (goldRates.length === 0) {
+    return (
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-20 text-center">
+        <h1 className="font-display text-2xl font-semibold text-ink-900 dark:text-white">
+          Gold rates are temporarily unavailable
+        </h1>
+        <p className="mt-2 text-sm text-ink-500 dark:text-ink-400">
+          We&rsquo;re having trouble reaching live data. Please check back shortly.
+        </p>
+      </div>
+    );
+  }
+
+  const [karats, cities] = await Promise.all([getGoldKarats(), getCities()]);
+  const karat24Id = karats.find((k) => k.label === "24K")?.id;
+  const karachiId = cities.find((c) => c.name === "Karachi")?.id;
+  const comparison = await getComparison(
+    "gold_rates", "rate_per_tola",
+    { karat_id: karat24Id ?? -1, city_id: karachiId ?? -1, status: "published" },
+    goldRates[0].karat24
+  );
+  const lastUpdated = computeLastUpdatedLabel(goldRates.map(() => new Date().toISOString()));
+
   return (
     <>
       <CategoryPageHeader
@@ -72,9 +100,9 @@ export default function GoldRatesPage() {
             </h2>
             <ComparisonTable
               rows={[
-                { label: "vs Yesterday", amount: `+Rs ${formatPKR(goldComparison.vsYesterday.amount)}`, percent: goldComparison.vsYesterday.percent, trend: "up" },
-                { label: "vs Last Week", amount: `+Rs ${formatPKR(goldComparison.vsLastWeek.amount)}`, percent: goldComparison.vsLastWeek.percent, trend: "up" },
-                { label: "vs Last Month", amount: `+Rs ${formatPKR(goldComparison.vsLastMonth.amount)}`, percent: goldComparison.vsLastMonth.percent, trend: "up" },
+                { label: "vs Yesterday", amount: `${comparison.vsYesterday.amount >= 0 ? "+" : ""}Rs ${formatPKR(comparison.vsYesterday.amount)}`, percent: comparison.vsYesterday.percent, trend: comparison.vsYesterday.trend },
+                { label: "vs Last Week", amount: `${comparison.vsLastWeek.amount >= 0 ? "+" : ""}Rs ${formatPKR(comparison.vsLastWeek.amount)}`, percent: comparison.vsLastWeek.percent, trend: comparison.vsLastWeek.trend },
+                { label: "vs Last Month", amount: `${comparison.vsLastMonth.amount >= 0 ? "+" : ""}Rs ${formatPKR(comparison.vsLastMonth.amount)}`, percent: comparison.vsLastMonth.percent, trend: comparison.vsLastMonth.trend },
               ]}
             />
           </div>

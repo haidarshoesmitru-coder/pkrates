@@ -16,7 +16,8 @@ import {
   type HistoricalRange,
 } from "@/components/shared/historical-range-tabs";
 import { formatPKR } from "@/lib/utils";
-import { goldRates, goldHistoryByRange, goldComparison } from "@/lib/mock-data";
+import type { GoldCityRate } from "@/types";
+import type { ComparisonResult } from "@/lib/data/history";
 
 const karatTabs = [
   { key: "karat24" as const, label: "24K" },
@@ -31,15 +32,17 @@ function GoldCard({
   changePercent,
   trend,
   karatLabel,
+  historyByRange,
 }: {
   city: string;
   value: number;
   changePercent: number;
   trend: "up" | "down" | "flat";
   karatLabel: string;
+  historyByRange: Record<"1D" | "7D" | "1M" | "1Y", number[]> | undefined;
 }) {
   const [range, setRange] = React.useState<HistoricalRange>("7D");
-  const series = goldHistoryByRange[city]?.[range] ?? [];
+  const series = historyByRange?.[range] ?? [];
 
   return (
     <Card className="p-5 hover:shadow-[var(--shadow-card-hover)] transition-shadow">
@@ -73,9 +76,27 @@ function GoldCard({
   );
 }
 
-export function GoldSection() {
+export function GoldSection({
+  rates,
+  historyByRange,
+  comparison,
+}: {
+  rates: GoldCityRate[];
+  historyByRange: Record<string, Record<"1D" | "7D" | "1M" | "1Y", number[]>>;
+  comparison: ComparisonResult;
+}) {
   const [activeKarat, setActiveKarat] = React.useState<typeof karatTabs[number]["key"]>("karat24");
   const karatLabel = karatTabs.find((t) => t.key === activeKarat)?.label ?? "24K";
+
+  if (rates.length === 0) {
+    return (
+      <section className="border-t border-ink-200 dark:border-ink-800 bg-[var(--surface-muted)]">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-14 sm:py-20">
+          <SectionHeading eyebrow="Gold Rates" title="Gold rates are temporarily unavailable" />
+        </div>
+      </section>
+    );
+  }
 
   return (
     <section className="border-t border-ink-200 dark:border-ink-800 bg-[var(--surface-muted)]">
@@ -108,25 +129,25 @@ export function GoldSection() {
           <div className="text-center sm:text-left">
             <p className="text-[11px] text-ink-400">vs Yesterday</p>
             <p className="mt-0.5 font-rate text-sm sm:text-base font-semibold text-rise-600 dark:text-pulse-400">
-              +Rs {formatPKR(goldComparison.vsYesterday.amount)} ({goldComparison.vsYesterday.percent}%)
+              {comparison.vsYesterday.amount >= 0 ? "+" : ""}Rs {formatPKR(comparison.vsYesterday.amount)} ({comparison.vsYesterday.percent}%)
             </p>
           </div>
           <div className="text-center sm:text-left border-x border-ink-200 dark:border-ink-800">
             <p className="text-[11px] text-ink-400">vs Last Week</p>
             <p className="mt-0.5 font-rate text-sm sm:text-base font-semibold text-rise-600 dark:text-pulse-400">
-              +Rs {formatPKR(goldComparison.vsLastWeek.amount)} ({goldComparison.vsLastWeek.percent}%)
+              {comparison.vsLastWeek.amount >= 0 ? "+" : ""}Rs {formatPKR(comparison.vsLastWeek.amount)} ({comparison.vsLastWeek.percent}%)
             </p>
           </div>
           <div className="text-center sm:text-left">
             <p className="text-[11px] text-ink-400">vs Last Month</p>
             <p className="mt-0.5 font-rate text-sm sm:text-base font-semibold text-rise-600 dark:text-pulse-400">
-              +Rs {formatPKR(goldComparison.vsLastMonth.amount)} ({goldComparison.vsLastMonth.percent}%)
+              {comparison.vsLastMonth.amount >= 0 ? "+" : ""}Rs {formatPKR(comparison.vsLastMonth.amount)} ({comparison.vsLastMonth.percent}%)
             </p>
           </div>
         </div>
 
         <div className="mt-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {goldRates.map((rate) => (
+          {rates.map((rate) => (
             <GoldCard
               key={rate.city}
               city={rate.city}
@@ -134,6 +155,7 @@ export function GoldSection() {
               changePercent={rate.changePercent}
               trend={rate.trend}
               karatLabel={karatLabel}
+              historyByRange={historyByRange[rate.city]}
             />
           ))}
 

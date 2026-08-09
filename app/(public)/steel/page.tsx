@@ -8,7 +8,10 @@ import { Card } from "@/components/ui/card";
 import { DeltaBadge } from "@/components/shared/delta-badge";
 import { WatchlistButton } from "@/components/shared/watchlist-button";
 import { formatPKR } from "@/lib/utils";
-import { steelRates, steelComparison, steelFAQs, lastUpdated } from "@/lib/mock-data";
+import { getSteelRates, computeLastUpdatedLabel } from "@/lib/data/rates";
+import { getComparison } from "@/lib/data/history";
+import { getSteelGrades, getCities } from "@/lib/data/reference";
+import { steelFAQs } from "@/lib/faq-content";
 
 export const metadata: Metadata = {
   title: "Steel / Saria Rate Today in Pakistan — Per Maund & Ton | PKRates",
@@ -16,7 +19,33 @@ export const metadata: Metadata = {
     "Live Grade 40 and Grade 60 steel/saria rates per maund and per ton across major Pakistani cities, sourced from Steel Melters and Re-Rolling Mills Associations.",
 };
 
-export default function SteelRatesPage() {
+export default async function SteelRatesPage() {
+  const steelRates = await getSteelRates();
+
+  if (steelRates.length === 0) {
+    return (
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-20 text-center">
+        <h1 className="font-display text-2xl font-semibold text-ink-900 dark:text-white">
+          Steel rates are temporarily unavailable
+        </h1>
+        <p className="mt-2 text-sm text-ink-500 dark:text-ink-400">
+          We&rsquo;re having trouble reaching live data. Please check back shortly.
+        </p>
+      </div>
+    );
+  }
+
+  const featured = steelRates.find((r) => r.grade === "Grade 60" && r.city === "Karachi") ?? steelRates[0];
+  const [grades, cities] = await Promise.all([getSteelGrades(), getCities()]);
+  const gradeId = grades.find((g) => g.label === featured.grade)?.id;
+  const cityId = cities.find((c) => c.name === featured.city)?.id;
+  const comparison = await getComparison(
+    "steel_rates", "price_per_ton",
+    { grade_id: gradeId ?? -1, city_id: cityId ?? -1, status: "published" },
+    featured.pricePerTon
+  );
+  const lastUpdated = computeLastUpdatedLabel(steelRates.map(() => new Date().toISOString()));
+
   return (
     <>
       <CategoryPageHeader
@@ -25,7 +54,7 @@ export default function SteelRatesPage() {
         breadcrumbLabel="Steel / Saria Rates"
         lastUpdated={lastUpdated}
         source="Steel Melters Association"
-        shareText={`Grade 60 Saria in Karachi: Rs ${formatPKR(steelRates[0].pricePerTon)} per ton on PKRates`}
+        shareText={`${featured.grade} Saria in ${featured.city}: Rs ${formatPKR(featured.pricePerTon)} per ton on PKRates`}
       />
 
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-10 sm:py-14 space-y-12">
@@ -64,16 +93,16 @@ export default function SteelRatesPage() {
         </section>
 
         <section className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <ChartPlaceholder title="Grade 60 Saria — Karachi" data={steelRates[0].sparkline} unit="PKR per ton" positive={false} />
+          <ChartPlaceholder title={`${featured.grade} Saria — ${featured.city}`} data={featured.sparkline} unit="PKR per ton" positive={featured.trend !== "down"} />
           <div>
             <h2 className="font-display text-lg font-semibold text-ink-900 dark:text-ink-100 mb-4">
-              Historical Comparison — Grade 60, Karachi
+              Historical Comparison — {featured.grade}, {featured.city}
             </h2>
             <ComparisonTable
               rows={[
-                { label: "vs Yesterday", amount: steelComparison.vsYesterday.amount, percent: steelComparison.vsYesterday.percent, trend: "down" },
-                { label: "vs Last Week", amount: steelComparison.vsLastWeek.amount, percent: steelComparison.vsLastWeek.percent, trend: "down" },
-                { label: "vs Last Month", amount: steelComparison.vsLastMonth.amount, percent: steelComparison.vsLastMonth.percent, trend: "down" },
+                { label: "vs Yesterday", amount: `${comparison.vsYesterday.amount >= 0 ? "+" : ""}Rs ${formatPKR(comparison.vsYesterday.amount)}`, percent: comparison.vsYesterday.percent, trend: comparison.vsYesterday.trend },
+                { label: "vs Last Week", amount: `${comparison.vsLastWeek.amount >= 0 ? "+" : ""}Rs ${formatPKR(comparison.vsLastWeek.amount)}`, percent: comparison.vsLastWeek.percent, trend: comparison.vsLastWeek.trend },
+                { label: "vs Last Month", amount: `${comparison.vsLastMonth.amount >= 0 ? "+" : ""}Rs ${formatPKR(comparison.vsLastMonth.amount)}`, percent: comparison.vsLastMonth.percent, trend: comparison.vsLastMonth.trend },
               ]}
             />
           </div>

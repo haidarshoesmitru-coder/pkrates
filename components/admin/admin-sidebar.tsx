@@ -20,7 +20,6 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { pendingSubmissions } from "@/lib/admin-mock-data";
 
 interface NavItem {
   href: string;
@@ -62,7 +61,7 @@ const navSections: NavSection[] = [
   },
 ];
 
-export function AdminSidebar() {
+export function AdminSidebar({ pendingCounts }: { pendingCounts: Record<string, number> }) {
   const pathname = usePathname();
 
   return (
@@ -88,7 +87,7 @@ export function AdminSidebar() {
             <div className="mt-2 space-y-0.5">
               {section.items.map((item) => {
                 const active = pathname === item.href;
-                const pendingCount = item.domain ? pendingSubmissions[item.domain]?.length ?? 0 : 0;
+                const pendingCount = item.domain ? pendingCounts[item.domain] ?? 0 : 0;
                 return (
                   <Link
                     key={item.href}

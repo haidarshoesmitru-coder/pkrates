@@ -6,7 +6,8 @@ import { FAQSection } from "@/components/rates/faq-section";
 import { RelatedCategories } from "@/components/rates/related-categories";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { prizeBondDraws, recentPrizeBondDraws, prizeBondFAQs, lastUpdated } from "@/lib/mock-data";
+import { getPrizeBondDraws, getRecentPrizeBondResults } from "@/lib/data/prize-bonds";
+import { prizeBondFAQs } from "@/lib/faq-content";
 
 export const metadata: Metadata = {
   title: "Prize Bond Results & Draw Calendar Pakistan | PKRates",
@@ -14,7 +15,10 @@ export const metadata: Metadata = {
     "Search prize bond draw results by bond number, and check the full upcoming draw calendar for every denomination — sourced from National Savings.",
 };
 
-export default function PrizeBondsPage() {
+export default async function PrizeBondsPage() {
+  const [draws, recentResults] = await Promise.all([getPrizeBondDraws(), getRecentPrizeBondResults()]);
+  const lastUpdated = new Date().toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
+
   return (
     <>
       <CategoryPageHeader
@@ -43,8 +47,11 @@ export default function PrizeBondsPage() {
           <h2 className="font-display text-lg font-semibold text-ink-900 dark:text-ink-100 mb-4">
             Upcoming &amp; Recent Draws
           </h2>
+          {draws.length === 0 ? (
+            <p className="text-sm text-ink-400">No draw information is available right now.</p>
+          ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            {prizeBondDraws.map((draw) => (
+            {draws.map((draw) => (
               <Card key={`${draw.denomination}-${draw.drawNumber}`} className="p-5">
                 <div className="flex items-center justify-between">
                   <span className="flex h-9 w-9 items-center justify-center rounded-full bg-ink-100 dark:bg-ink-800 text-gold-600 dark:text-gold-400">
@@ -66,6 +73,7 @@ export default function PrizeBondsPage() {
               </Card>
             ))}
           </div>
+          )}
         </section>
 
         <section className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -74,8 +82,11 @@ export default function PrizeBondsPage() {
             <h2 className="font-display text-lg font-semibold text-ink-900 dark:text-ink-100 mb-4">
               Recent Draw History
             </h2>
+            {recentResults.length === 0 ? (
+              <p className="text-sm text-ink-400">No completed draws recorded yet.</p>
+            ) : (
             <Card className="divide-y divide-ink-200 dark:divide-ink-800">
-              {recentPrizeBondDraws.map((d) => (
+              {recentResults.map((d) => (
                 <div key={`${d.denomination}-${d.drawNumber}`} className="flex items-center justify-between px-5 py-3.5">
                   <div>
                     <p className="text-sm font-medium text-ink-900 dark:text-ink-100">{d.denomination} &middot; Draw #{d.drawNumber}</p>
@@ -85,6 +96,7 @@ export default function PrizeBondsPage() {
                 </div>
               ))}
             </Card>
+            )}
           </div>
         </section>
 

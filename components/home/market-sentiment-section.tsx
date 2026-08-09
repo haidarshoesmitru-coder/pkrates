@@ -2,7 +2,7 @@ import { Flame, Snowflake, Minus, Zap } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { SectionHeading } from "@/components/shared/section-heading";
 import { SentimentGauge } from "@/components/shared/sentiment-gauge";
-import { marketSentiment, overallSentimentScore } from "@/lib/mock-data";
+import type { SentimentSignal } from "@/types";
 import { cn } from "@/lib/utils";
 
 const moodStyles: Record<string, { icon: typeof Flame; className: string; label: string }> = {
@@ -12,7 +12,7 @@ const moodStyles: Record<string, { icon: typeof Flame; className: string; label:
   volatile: { icon: Zap, className: "text-gold-600 dark:text-gold-400 bg-gold-50 dark:bg-gold-900/30", label: "Volatile" },
 };
 
-export function MarketSentimentSection() {
+export function MarketSentimentSection({ signals, overallScore }: { signals: SentimentSignal[]; overallScore: number }) {
   return (
     <section className="border-t border-ink-200 dark:border-ink-800">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-14 sm:py-20">
@@ -27,14 +27,14 @@ export function MarketSentimentSection() {
             <span className="font-rate text-xs uppercase tracking-widest text-ink-400">
               Overall Market Mood
             </span>
-            <SentimentGauge score={overallSentimentScore} className="mt-4" />
+            <SentimentGauge score={overallScore} className="mt-4" />
             <p className="mt-3 max-w-[220px] text-center text-xs text-ink-400">
               Weighted across gold, currency, fuel, crypto and steel movement today
             </p>
           </Card>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {marketSentiment.map((signal) => {
+            {signals.map((signal) => {
               const style = moodStyles[signal.mood];
               const Icon = style.icon;
               return (

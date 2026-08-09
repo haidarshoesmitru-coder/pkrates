@@ -8,7 +8,11 @@ import { Card } from "@/components/ui/card";
 import { DeltaBadge } from "@/components/shared/delta-badge";
 import { WatchlistButton } from "@/components/shared/watchlist-button";
 import { formatPKR } from "@/lib/utils";
-import { currencyRates, currencyComparison, currencyFAQs, lastUpdated } from "@/lib/mock-data";
+import { getCurrencyRates, computeLastUpdatedLabel } from "@/lib/data/rates";
+import { getComparison } from "@/lib/data/history";
+import { getCurrencies } from "@/lib/data/reference";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { currencyFAQs } from "@/lib/faq-content";
 
 export const metadata: Metadata = {
   title: "Currency Rates Today — USD, AED, GBP to PKR | PKRates",
@@ -16,7 +20,46 @@ export const metadata: Metadata = {
     "Live interbank and open market currency rates for USD, AED, GBP, EUR, SAR and more — buy/sell rates against PKR, sourced from the State Bank of Pakistan and licensed exchange companies.",
 };
 
-export default function CurrencyRatesPage() {
+export default async function CurrencyRatesPage() {
+  const currencyRates = await getCurrencyRates("open_market");
+
+  if (currencyRates.length === 0) {
+    return (
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-20 text-center">
+        <h1 className="font-display text-2xl font-semibold text-ink-900 dark:text-white">
+          Currency rates are temporarily unavailable
+        </h1>
+        <p className="mt-2 text-sm text-ink-500 dark:text-ink-400">
+          We&rsquo;re having trouble reaching live data. Please check back shortly.
+        </p>
+      </div>
+    );
+  }
+
+  const currencies = await getCurrencies();
+  const usdId = currencies.find((c) => c.code === "USD")?.id;
+
+  const supabase = await createSupabaseServerClient();
+  const { data: usdHistoryData } = usdId
+    ? await supabase
+        .from("currency_rates")
+        .select("sell_rate")
+        .eq("currency_id", usdId)
+        .eq("rate_type", "interbank")
+        .eq("status", "published")
+        .order("effective_at", { ascending: false })
+        .limit(7)
+    : { data: [] as { sell_rate: number }[] };
+  const usdHistory = (usdHistoryData ?? []) as { sell_rate: number }[];
+  const usdSparkline = [...usdHistory].reverse().map((r) => r.sell_rate);
+
+  const comparison = await getComparison(
+    "currency_rates", "sell_rate",
+    { currency_id: usdId ?? -1, rate_type: "open_market", status: "published" },
+    currencyRates[0].openSell
+  );
+  const lastUpdated = computeLastUpdatedLabel(currencyRates.map(() => new Date().toISOString()));
+
   return (
     <>
       <CategoryPageHeader
@@ -71,16 +114,16 @@ export default function CurrencyRatesPage() {
         </section>
 
         <section className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <ChartPlaceholder title="USD / PKR — Interbank" data={[276.1, 276.6, 277.2, 277.0, 277.9, 278.4, 278.8]} unit="PKR per USD" />
+          <ChartPlaceholder title="USD / PKR — Interbank" data={usdSparkline} unit="PKR per USD" />
           <div>
             <h2 className="font-display text-lg font-semibold text-ink-900 dark:text-ink-100 mb-4">
               Historical Comparison — USD/PKR
             </h2>
             <ComparisonTable
               rows={[
-                { label: "vs Yesterday", amount: currencyComparison.vsYesterday.amount, percent: currencyComparison.vsYesterday.percent, trend: "up" },
-                { label: "vs Last Week", amount: currencyComparison.vsLastWeek.amount, percent: currencyComparison.vsLastWeek.percent, trend: "up" },
-                { label: "vs Last Month", amount: currencyComparison.vsLastMonth.amount, percent: currencyComparison.vsLastMonth.percent, trend: "up" },
+                { label: "vs Yesterday", amount: `${comparison.vsYesterday.amount >= 0 ? "+" : ""}Rs ${comparison.vsYesterday.amount.toFixed(2)}`, percent: comparison.vsYesterday.percent, trend: comparison.vsYesterday.trend },
+                { label: "vs Last Week", amount: `${comparison.vsLastWeek.amount >= 0 ? "+" : ""}Rs ${comparison.vsLastWeek.amount.toFixed(2)}`, percent: comparison.vsLastWeek.percent, trend: comparison.vsLastWeek.trend },
+                { label: "vs Last Month", amount: `${comparison.vsLastMonth.amount >= 0 ? "+" : ""}Rs ${comparison.vsLastMonth.amount.toFixed(2)}`, percent: comparison.vsLastMonth.percent, trend: comparison.vsLastMonth.trend },
               ]}
             />
           </div>

@@ -19,22 +19,20 @@
  * promise kept by convention, but a type/array that makes the bug
  * class impossible to reintroduce by accident.
  *
- * Keyword data is deliberately pulled from the *existing* mock
- * data (lib/mock-data.ts) rather than re-typed here — currency
- * codes, crypto symbols, cement brands, steel grades, and city
- * names are already defined once; duplicating them as a second,
- * separately-maintained keyword list is exactly the kind of drift
- * that produces stale/broken search results over time.
+ * Keyword data (currency codes, crypto symbols, cement brands,
+ * steel grades, city names) is static vocabulary matching the
+ * reference data seeded in supabase/migrations — search terms
+ * don't change per-request the way rate values do, so hardcoding
+ * them here avoids a Supabase round trip on every keystroke while
+ * staying accurate to what the seeded reference tables contain.
  */
 
-import {
-  currencyRates,
-  cryptoRates,
-  cementRates,
-  steelRates,
-  goldRates,
-  silverRates,
-} from "@/lib/mock-data";
+// Search keywords are static vocabulary (city names, currency codes,
+// coin symbols, brand names) — not live rate data — so they're
+// hardcoded here rather than derived from a Supabase query on
+// every keystroke. Values match the reference data seeded in
+// supabase/migrations (cities, currencies, crypto_coins,
+// cement_brands, steel_grades).
 
 /** The complete, exhaustive set of real routes. Nothing in this
  * file may reference a href outside this list — enforced by
@@ -87,31 +85,41 @@ const STOPWORDS = new Set([
   "in", "the", "a", "of", "to", "for", "pakistan", "pkr", "on",
 ]);
 
-const goldCities = goldRates.map((r) => r.city.toLowerCase());
-const silverCities = silverRates.map((r) => r.city.toLowerCase());
-const cementCities = cementRates.map((r) => r.city.toLowerCase());
-const steelCities = steelRates.map((r) => r.city.toLowerCase());
+const CITY_NAMES = ["karachi", "lahore", "islamabad", "peshawar", "quetta", "multan", "faisalabad", "hyderabad", "sialkot", "gujranwala"];
+const goldCities = CITY_NAMES;
+const silverCities = CITY_NAMES;
+const cementCities = CITY_NAMES;
+const steelCities = CITY_NAMES;
 
-const currencyKeywords = currencyRates.flatMap((c) => [
-  c.code.toLowerCase(),
-  c.name.toLowerCase(),
-  ...c.name.toLowerCase().split(" "),
-]);
+const currencyKeywords = [
+  "usd", "us dollar", "us", "dollar",
+  "aed", "uae dirham", "uae", "dirham",
+  "gbp", "british pound", "british", "pound",
+  "eur", "euro",
+  "sar", "saudi riyal", "saudi", "riyal",
+  "cny", "chinese yuan", "chinese", "yuan",
+  "cad", "canadian dollar", "canadian",
+  "aud", "australian dollar", "australian",
+  "jpy", "japanese yen", "japanese", "yen",
+  "qar", "qatari riyal", "qatari",
+  "kwd", "kuwaiti dinar", "kuwaiti", "dinar",
+  "omr", "omani rial", "omani", "rial",
+  "bhd", "bahraini dinar", "bahraini",
+  "myr", "malaysian ringgit", "malaysian", "ringgit",
+  "sgd", "singapore dollar", "singapore",
+];
 
-const cryptoKeywords = cryptoRates.flatMap((c) => [
-  c.symbol.toLowerCase(),
-  c.name.toLowerCase(),
-]);
+const cryptoKeywords = [
+  "btc", "bitcoin", "eth", "ethereum", "usdt", "tether",
+  "bnb", "sol", "solana", "xrp", "usdc", "usd coin", "ada", "cardano",
+];
 
-const cementBrandKeywords = cementRates.flatMap((c) => [
-  c.brand.toLowerCase(),
-  ...c.brand.toLowerCase().split(" "),
-]);
+const cementBrandKeywords = [
+  "lucky", "lucky cement", "dg", "dg cement", "bestway", "bestway cement",
+  "fauji", "fauji cement", "maple leaf", "maple leaf cement", "cherat", "cherat cement",
+];
 
-const steelGradeKeywords = steelRates.flatMap((s) => [
-  s.grade.toLowerCase(),
-  ...s.grade.toLowerCase().split(" "),
-]);
+const steelGradeKeywords = ["grade 40", "grade 60", "40", "60"];
 
 const SEARCH_INDEX: SearchEntry[] = [
   {
@@ -270,15 +278,7 @@ export function searchPKRates(rawQuery: string, limit = 6): SearchResult[] {
   return results.sort((a, b) => b.score - a.score).slice(0, limit);
 }
 
-/** The single best match, used when the user presses Enter /
- * submits — or `null` if nothing matched, which callers MUST
- * treat as "show No results found", never as "guess anyway". */
-export function getTopSearchMatch(query: string): SearchResult | null {
-  const [top] = searchPKRates(query, 1);
-  return top ?? null;
-}
-
-/** All 7 real categories, for the command palette's idle
+/** All 8 real categories, for the command palette's idle
  * (empty-query, "browse everything") state — mirrors the
  * original static quickLinks list's default view, but sourced
  * from the same single SEARCH_INDEX rather than a second,

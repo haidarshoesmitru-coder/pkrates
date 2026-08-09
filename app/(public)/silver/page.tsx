@@ -8,13 +8,11 @@ import { Card } from "@/components/ui/card";
 import { DeltaBadge } from "@/components/shared/delta-badge";
 import { WatchlistButton } from "@/components/shared/watchlist-button";
 import { formatPKR } from "@/lib/utils";
-import { silverRates, silverComparison, silverFAQs, lastUpdated } from "@/lib/mock-data";
+import { getSilverRates, computeLastUpdatedLabel } from "@/lib/data/rates";
+import { getComparison } from "@/lib/data/history";
+import { getSilverPurities, getCities } from "@/lib/data/reference";
+import { silverFAQs } from "@/lib/faq-content";
 
-// OpenGraph is new here (no existing page in the project sets it
-// yet -- confirmed during review before writing this file), added
-// using the same `Metadata` type every page already imports from
-// "next". Scoped to this page only, per "minimum required new
-// files" -- not retrofitted onto Gold or the others in this change.
 export const metadata: Metadata = {
   title: "Silver Rate Today in Pakistan — 999 Fine & 925 Sterling | PKRates",
   description:
@@ -26,7 +24,32 @@ export const metadata: Metadata = {
   },
 };
 
-export default function SilverRatesPage() {
+export default async function SilverRatesPage() {
+  const silverRates = await getSilverRates();
+
+  if (silverRates.length === 0) {
+    return (
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-20 text-center">
+        <h1 className="font-display text-2xl font-semibold text-ink-900 dark:text-white">
+          Silver rates are temporarily unavailable
+        </h1>
+        <p className="mt-2 text-sm text-ink-500 dark:text-ink-400">
+          We&rsquo;re having trouble reaching live data. Please check back shortly.
+        </p>
+      </div>
+    );
+  }
+
+  const [purities, cities] = await Promise.all([getSilverPurities(), getCities()]);
+  const fine999Id = purities.find((p) => p.label === "999 Fine")?.id;
+  const karachiId = cities.find((c) => c.name === "Karachi")?.id;
+  const comparison = await getComparison(
+    "silver_rates", "rate_per_tola",
+    { purity_id: fine999Id ?? -1, city_id: karachiId ?? -1, status: "published" },
+    silverRates[0].fine999
+  );
+  const lastUpdated = computeLastUpdatedLabel(silverRates.map(() => new Date().toISOString()));
+
   return (
     <>
       <CategoryPageHeader
@@ -82,9 +105,9 @@ export default function SilverRatesPage() {
             </h2>
             <ComparisonTable
               rows={[
-                { label: "vs Yesterday", amount: `+Rs ${formatPKR(silverComparison.vsYesterday.amount)}`, percent: silverComparison.vsYesterday.percent, trend: "up" },
-                { label: "vs Last Week", amount: `+Rs ${formatPKR(silverComparison.vsLastWeek.amount)}`, percent: silverComparison.vsLastWeek.percent, trend: "up" },
-                { label: "vs Last Month", amount: `+Rs ${formatPKR(silverComparison.vsLastMonth.amount)}`, percent: silverComparison.vsLastMonth.percent, trend: "up" },
+                { label: "vs Yesterday", amount: `${comparison.vsYesterday.amount >= 0 ? "+" : ""}Rs ${formatPKR(comparison.vsYesterday.amount)}`, percent: comparison.vsYesterday.percent, trend: comparison.vsYesterday.trend },
+                { label: "vs Last Week", amount: `${comparison.vsLastWeek.amount >= 0 ? "+" : ""}Rs ${formatPKR(comparison.vsLastWeek.amount)}`, percent: comparison.vsLastWeek.percent, trend: comparison.vsLastWeek.trend },
+                { label: "vs Last Month", amount: `${comparison.vsLastMonth.amount >= 0 ? "+" : ""}Rs ${formatPKR(comparison.vsLastMonth.amount)}`, percent: comparison.vsLastMonth.percent, trend: comparison.vsLastMonth.trend },
               ]}
             />
           </div>

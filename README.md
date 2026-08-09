@@ -333,6 +333,91 @@ found" (Silver didn't exist yet). Now that it's real, that comment would be
 factually wrong, so it was swapped to "Platinum" — which genuinely still
 has no PKRates page.
 
+## v1.8 — Full Supabase Integration (mock data removed)
+
+The largest release in the project's history: every public page, every
+homepage section, and every admin page now reads and writes real Supabase
+data. `lib/mock-data.ts` and `lib/admin-mock-data.ts` are deleted — every
+one of their 25 consumers was migrated first, then verified clean, before
+either file was removed.
+
+**New core infrastructure:**
+- `lib/supabase/server.ts` — RLS-respecting client for all reads (public
+  and admin)
+- `lib/supabase/admin.ts` — service-role client for admin writes, with an
+  explicit header comment on *why*: there is no Supabase Auth session yet
+  (every prior audit in this repo flagged that as separate, larger work).
+  Every write policy in the schema requires `auth.uid()`; until real
+  per-user auth exists, mutations are attributed to a seeded system-admin
+  user rather than a fabricated identity. This is the one honest
+  architectural tradeoff in this release — it resolves automatically once
+  auth ships, by swapping one client reference.
+- `types/database.ts` — hand-authored Supabase types (no network access in
+  this environment to run `supabase gen types`, but every table was
+  authored in this project's own migrations, so the shapes are exact)
+
+**Data access layer (`lib/data/*.ts`):** `reference.ts` (cached dimension
+lookups), `rates.ts` (real per-domain queries with real change%/trend/
+sparkline computed from actual historical rows — never fabricated),
+`prize-bonds.ts`, `history.ts` (one generic vs-yesterday/week/month
+comparison reused across every domain), `sentiment.ts` (market mood
+computed from real % changes, not a hardcoded score), `admin.ts` (one
+adapter per domain mirroring the SQL trigger functions, driving generic
+CRUD), `admin-actions.ts` (Server Actions for the client-side mutation
+boundary).
+
+**What's now genuinely live:** every rate table, every chart sparkline,
+every comparison strip, the homepage's biggest-movers ranking, the market
+sentiment gauge, the category grid's headline figures (previously a
+fabricated ±1.2%, now the real % change), the admin dashboard's stats,
+audit log, sources list, users list, and update history.
+
+**What honestly stays static, and why:** FAQ content (`lib/faq-content.ts`)
+and category routing metadata (`lib/categories-static.ts`) are editorial/
+navigation content, not rate data — there's no "live" version of an FAQ
+answer. Two of the four homepage social-proof stats ("50,000+ daily
+users", "500K+ rate checks") stay static because no analytics/usage-
+tracking table exists in the schema yet — fabricating those would be
+worse than labeling them honestly as marketing copy. Search keywords
+(`lib/search.ts`) are static vocabulary (city names, currency codes) —
+matching the seeded reference data, but not worth a Supabase round trip
+per keystroke.
+
+**Theme fix:** `defaultTheme` was `"light"`, ignoring the visitor's OS
+preference entirely — changed to `"system"`. The toggle was also a
+two-state light/dark cycle with no explicit "System" option; it's now a
+proper three-way Light/Dark/System menu. `next-themes` already persists
+whatever the user explicitly picks to `localStorage`, so choosing "System"
+is itself a real, storable, persisted choice — not a special case.
+
+**Two real bugs caught during this migration, not introduced by it:**
+`getAuditLog()`/`getUpdateHistory()` referenced `.full_name` on objects
+that only ever had `.name` (a typo from early in this session, would have
+been a runtime `undefined` shown to admins, not a compile error) — fixed.
+A duplicated pair of entries in `package.json`'s `dependencies` (added
+twice across two edits) — fixed and re-validated as parseable JSON.
+
+**A serious bug caught and fixed while removing dead code:** cleaning up
+two genuinely unused helper functions in `lib/data/rates.ts` surfaced that
+`computeLastUpdatedLabel`'s own function signature had been silently
+dropped in an earlier edit this session — its body was sitting as orphaned
+statements after the previous function's closing brace, which would have
+been a hard syntax error on every page that imports it (i.e. all eight
+category pages plus the homepage). Restored the missing signature, then
+re-ran a project-wide structural balance check (braces/parens across all
+102 TypeScript files) specifically to make sure this was the only instance
+of that failure class.
+
+**TypeScript correctness for dynamic multi-table queries:** several
+functions in `lib/data/admin.ts` and `lib/data/history.ts` query one of
+several structurally-different tables based on a runtime domain string.
+Rather than widening those to `any`, table names are typed against the
+real `TableName` union (`keyof Database["public"]["Tables"]`), and the
+handful of spots where Supabase's generated Insert/Update/Select types
+still can't be statically resolved from a union carry a narrow, commented
+`@ts-expect-error` — the same documented-exception pattern used once
+already in v1.5's schema work, not a new one invented for this release.
+
 ## Notes for Phase 2
 
 - Replace `lib/mock-data.ts` reads with server-side Supabase queries against the

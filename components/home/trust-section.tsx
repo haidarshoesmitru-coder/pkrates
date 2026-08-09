@@ -1,6 +1,6 @@
 import { ShieldCheck, Clock, FileCheck2, Building2 } from "lucide-react";
 import { SectionHeading } from "@/components/shared/section-heading";
-import { trustSources } from "@/lib/mock-data";
+
 
 const pillars = [
   {
@@ -20,7 +20,7 @@ const pillars = [
   },
 ];
 
-export function TrustSection() {
+export function TrustSection({ sources }: { sources: { name: string; role: string }[] }) {
   return (
     <section className="border-t border-ink-200 dark:border-ink-800 bg-ink-950 text-ink-50">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-16 sm:py-24">
@@ -51,7 +51,7 @@ export function TrustSection() {
             </h3>
           </div>
           <div className="mt-5 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-            {trustSources.map((s) => (
+            {sources.map((s) => (
               <div key={s.name} className="rounded-xl border border-ink-800 bg-ink-950/60 p-4">
                 <p className="text-sm font-medium text-ink-100 leading-snug">{s.name}</p>
                 <p className="mt-1 text-xs text-ink-500">{s.role}</p>

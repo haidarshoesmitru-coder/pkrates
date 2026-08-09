@@ -5,9 +5,9 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { DeltaBadge } from "@/components/shared/delta-badge";
 import { SectionHeading } from "@/components/shared/section-heading";
 import { formatPKR } from "@/lib/utils";
-import { currencyRates } from "@/lib/mock-data";
+import type { CurrencyRate } from "@/types";
 
-function CurrencyTable({ mode }: { mode: "interbank" | "open" }) {
+function CurrencyTable({ mode, rates }: { mode: "interbank" | "open"; rates: CurrencyRate[] }) {
   return (
     <div className="overflow-hidden rounded-2xl border border-ink-200 dark:border-ink-800">
       <table className="w-full text-sm">
@@ -20,7 +20,7 @@ function CurrencyTable({ mode }: { mode: "interbank" | "open" }) {
           </tr>
         </thead>
         <tbody className="divide-y divide-ink-200 dark:divide-ink-800">
-          {currencyRates.map((c) => (
+          {rates.map((c) => (
             <tr key={c.code} className="bg-[var(--surface)] hover:bg-ink-50 dark:hover:bg-ink-900/60 transition-colors">
               <td className="px-5 py-4">
                 <div className="flex items-center gap-2.5">
@@ -48,7 +48,7 @@ function CurrencyTable({ mode }: { mode: "interbank" | "open" }) {
   );
 }
 
-export function CurrencySection() {
+export function CurrencySection({ rates }: { rates: CurrencyRate[] }) {
   return (
     <section className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-14 sm:py-20">
       <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-6">
@@ -59,18 +59,22 @@ export function CurrencySection() {
         />
       </div>
 
-      <Tabs defaultValue="interbank" className="mt-8">
-        <TabsList>
-          <TabsTrigger value="interbank">Interbank</TabsTrigger>
-          <TabsTrigger value="open">Open Market</TabsTrigger>
-        </TabsList>
-        <TabsContent value="interbank">
-          <CurrencyTable mode="interbank" />
-        </TabsContent>
-        <TabsContent value="open">
-          <CurrencyTable mode="open" />
-        </TabsContent>
-      </Tabs>
+      {rates.length === 0 ? (
+        <p className="mt-8 text-sm text-ink-400">Currency rates are temporarily unavailable.</p>
+      ) : (
+        <Tabs defaultValue="interbank" className="mt-8">
+          <TabsList>
+            <TabsTrigger value="interbank">Interbank</TabsTrigger>
+            <TabsTrigger value="open">Open Market</TabsTrigger>
+          </TabsList>
+          <TabsContent value="interbank">
+            <CurrencyTable mode="interbank" rates={rates} />
+          </TabsContent>
+          <TabsContent value="open">
+            <CurrencyTable mode="open" rates={rates} />
+          </TabsContent>
+        </Tabs>
+      )}
 
       <div className="mt-6 flex justify-end">
         <Button asChild variant="link">

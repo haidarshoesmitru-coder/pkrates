@@ -5,25 +5,51 @@ import { Search, Lock, Check, X, FileEdit, Clock, RefreshCw } from "lucide-react
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
-import { auditLog, domainConfigs } from "@/lib/admin-mock-data";
+import { domainConfigs } from "@/lib/domain-config";
 
-const actionMeta = {
+export interface AuditLogRow {
+  id: number;
+  entity_table: string;
+  domain: string | null;
+  action: string;
+  old_value: unknown;
+  new_value: unknown;
+  performedByName: string;
+  performed_at: string;
+  notes: string | null;
+}
+
+const actionMeta: Record<string, { icon: typeof Clock; className: string; label: string }> = {
   insert: { icon: Clock, className: "bg-ink-100 dark:bg-ink-800 text-ink-500 dark:text-ink-400", label: "Submitted" },
   approve: { icon: Check, className: "bg-pulse-50 dark:bg-pulse-950/50 text-rise-600 dark:text-pulse-300", label: "Approved" },
+  auto_publish: { icon: Check, className: "bg-pulse-50 dark:bg-pulse-950/50 text-rise-600 dark:text-pulse-300", label: "Auto-published" },
   reject: { icon: X, className: "bg-red-50 dark:bg-red-950/40 text-fall-600 dark:text-red-300", label: "Rejected" },
   correct: { icon: FileEdit, className: "bg-gold-50 dark:bg-gold-900/30 text-gold-700 dark:text-gold-300", label: "Corrected" },
   update: { icon: RefreshCw, className: "bg-ink-100 dark:bg-ink-800 text-ink-500 dark:text-ink-400", label: "Updated" },
+  verify: { icon: FileEdit, className: "bg-gold-50 dark:bg-gold-900/30 text-gold-700 dark:text-gold-300", label: "Verified" },
+  deactivate: { icon: X, className: "bg-red-50 dark:bg-red-950/40 text-fall-600 dark:text-red-300", label: "Deactivated" },
 };
 
-export function AuditLogTable() {
+function summarize(entry: AuditLogRow) {
+  const val = (entry.new_value ?? entry.old_value) as Record<string, unknown> | null;
+  if (!val) return entry.entity_table;
+  return Object.entries(val)
+    .filter(([k]) => !["__table__", "published_id", "flagged"].includes(k))
+    .map(([, v]) => String(v))
+    .slice(0, 4)
+    .join(" · ");
+}
+
+export function AuditLogTable({ entries, loadError }: { entries: AuditLogRow[]; loadError?: boolean }) {
   const [query, setQuery] = React.useState("");
   const [domainFilter, setDomainFilter] = React.useState("all");
   const [actionFilter, setActionFilter] = React.useState("all");
 
-  const filtered = auditLog.filter((entry) => {
+  const filtered = entries.filter((entry) => {
+    const summary = summarize(entry);
     const matchesQuery =
-      entry.summary.toLowerCase().includes(query.toLowerCase()) ||
-      entry.performedBy.toLowerCase().includes(query.toLowerCase());
+      summary.toLowerCase().includes(query.toLowerCase()) ||
+      entry.performedByName.toLowerCase().includes(query.toLowerCase());
     const matchesDomain = domainFilter === "all" || entry.domain === domainFilter;
     const matchesAction = actionFilter === "all" || entry.action === actionFilter;
     return matchesQuery && matchesDomain && matchesAction;
@@ -48,7 +74,7 @@ export function AuditLogTable() {
         >
           <option value="all">All domains</option>
           {Object.values(domainConfigs).map((d) => (
-            <option key={d.slug} value={d.slug}>{d.title.replace(" Management", "")}</option>
+            <option key={d.slug} value={d.slug === "prize-bonds" ? "prize_bonds" : d.slug}>{d.title.replace(" Management", "")}</option>
           ))}
           <option value="system">System</option>
         </select>
@@ -60,8 +86,10 @@ export function AuditLogTable() {
           <option value="all">All actions</option>
           <option value="insert">Submitted</option>
           <option value="approve">Approved</option>
+          <option value="auto_publish">Auto-published</option>
           <option value="reject">Rejected</option>
           <option value="correct">Corrected</option>
+          <option value="verify">Verified</option>
           <option value="update">Updated</option>
         </select>
       </div>
@@ -71,12 +99,17 @@ export function AuditLogTable() {
         This log is append-only — entries cannot be edited or deleted by any role, including Super Admin.
       </div>
 
+      {loadError ? (
+        <Card className="p-10 text-center border-fall-500/40">
+          <p className="text-sm text-ink-500 dark:text-ink-400">Couldn&rsquo;t load the audit log. Please refresh the page.</p>
+        </Card>
+      ) : (
       <Card className="divide-y divide-ink-200 dark:divide-ink-800">
         {filtered.length === 0 && (
           <p className="px-5 py-10 text-center text-sm text-ink-400">No matching entries.</p>
         )}
         {filtered.map((entry) => {
-          const meta = actionMeta[entry.action];
+          const meta = actionMeta[entry.action] ?? actionMeta.update;
           const Icon = meta.icon;
           return (
             <div key={entry.id} className="flex items-start gap-4 px-5 py-4">
@@ -85,29 +118,23 @@ export function AuditLogTable() {
               </span>
               <div className="flex-1 min-w-0">
                 <div className="flex flex-wrap items-center gap-2">
-                  <Badge variant="outline" className="capitalize">{entry.domain.replace("-", " ")}</Badge>
+                  <Badge variant="outline" className="capitalize">{(entry.domain ?? "system").replace("_", " ")}</Badge>
                   <span className="text-xs text-ink-400">{meta.label}</span>
                 </div>
-                <p className="mt-1.5 text-sm text-ink-800 dark:text-ink-200">{entry.summary}</p>
-                {(entry.oldValue || entry.newValue) && (
-                  <p className="mt-1 font-rate text-xs text-ink-500 dark:text-ink-400">
-                    {entry.oldValue && <span className="line-through decoration-fall-500/60">{entry.oldValue}</span>}
-                    {entry.oldValue && entry.newValue && " → "}
-                    {entry.newValue && <span className="text-ink-700 dark:text-ink-200">{entry.newValue}</span>}
-                  </p>
-                )}
+                <p className="mt-1.5 text-sm text-ink-800 dark:text-ink-200">{summarize(entry)}</p>
                 {entry.notes && (
                   <p className="mt-1 text-xs italic text-ink-400">&ldquo;{entry.notes}&rdquo;</p>
                 )}
                 <p className="mt-1.5 text-xs text-ink-400">
-                  {entry.performedBy} &middot; {entry.performedAt} &middot;{" "}
-                  <span className="font-rate">{entry.entityTable}</span>
+                  {entry.performedByName} &middot; {new Date(entry.performed_at).toLocaleString("en-GB")} &middot;{" "}
+                  <span className="font-rate">{entry.entity_table}</span>
                 </p>
               </div>
             </div>
           );
         })}
       </Card>
+      )}
     </div>
   );
 }

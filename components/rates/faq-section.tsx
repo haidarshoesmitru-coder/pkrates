@@ -45,7 +45,6 @@ export function FAQSection({ title, items }: { title: string; items: FAQItem[] }
       {/* SEO: FAQPage structured data mirrors the visible Q&A above */}
       <script
         type="application/ld+json"
-        // eslint-disable-next-line react/no-danger
         dangerouslySetInnerHTML={{
           __html: JSON.stringify({
             "@context": "https://schema.org",

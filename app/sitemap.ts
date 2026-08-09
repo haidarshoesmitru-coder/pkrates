@@ -1,5 +1,5 @@
 import type { MetadataRoute } from "next";
-import { categories } from "@/lib/mock-data";
+import { CATEGORY_META } from "@/lib/categories-static";
 
 /**
  * No sitemap existed anywhere in the project before this file
@@ -10,11 +10,10 @@ import { categories } from "@/lib/mock-data";
  * sitemap per route, not a per-category one — so this is the
  * minimum one new file needed, and it's built to require zero
  * future edits when a category is added or removed: every entry
- * below the homepage is generated from the same `categories`
- * array that already drives the homepage's CategoryGrid and every
- * page's RelatedCategories section. Adding Silver to that one
- * array (lib/mock-data.ts) is what put it here — nothing in this
- * file references "silver" directly.
+ * below the homepage is generated from `CATEGORY_META`
+ * (lib/categories-static.ts) — the same static routing list that
+ * also drives RelatedCategories and lib/search.ts, so adding a
+ * category is a one-file change, not three.
  */
 export default function sitemap(): MetadataRoute.Sitemap {
   const baseUrl = "https://pkrates.pk";
@@ -28,7 +27,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     },
   ];
 
-  const categoryPages: MetadataRoute.Sitemap = categories.map((category) => ({
+  const categoryPages: MetadataRoute.Sitemap = CATEGORY_META.map((category) => ({
     url: `${baseUrl}/${category.slug}`,
     lastModified: new Date(),
     changeFrequency: "hourly",

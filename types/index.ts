@@ -52,6 +52,35 @@ export interface FuelPrice {
   nextReviewEstimate: string;
 }
 
+export interface CementCityRate {
+  brand: string;
+  city: string;
+  pricePerBag: number;
+  changePercent: number;
+  trend: TrendDirection;
+  sparkline: number[];
+}
+
+export interface SteelCityRate {
+  grade: string;
+  city: string;
+  pricePerMaund: number;
+  pricePerTon: number;
+  changePercent: number;
+  trend: TrendDirection;
+  sparkline: number[];
+}
+
+export interface CryptoRate {
+  symbol: string;
+  name: string;
+  priceUsd: number;
+  pricePkr: number;
+  changePercent: number;
+  trend: TrendDirection;
+  sparkline: number[];
+}
+
 export interface PrizeBondDraw {
   denomination: string;
   drawNumber: number;
@@ -70,6 +99,13 @@ export interface Mover {
   trend: TrendDirection;
 }
 
+export interface SentimentSignal {
+  category: string;
+  mood: "bullish" | "bearish" | "neutral" | "volatile";
+  score: number;
+  note: string;
+}
+
 export interface CategoryCard {
   slug: string;
   title: string;
@@ -77,5 +113,6 @@ export interface CategoryCard {
   headlineValue: string;
   headlineLabel: string;
   trend: TrendDirection;
+  changePercent: number;
   icon: string;
 }

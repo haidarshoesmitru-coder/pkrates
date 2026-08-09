@@ -12,7 +12,7 @@ import {
 } from "lucide-react";
 import { SectionHeading } from "@/components/shared/section-heading";
 import { DeltaBadge } from "@/components/shared/delta-badge";
-import { categories } from "@/lib/mock-data";
+import type { CategoryCard } from "@/types";
 
 const iconMap: Record<string, ComponentType<{ className?: string }>> = {
   coins: Coins,
@@ -25,7 +25,7 @@ const iconMap: Record<string, ComponentType<{ className?: string }>> = {
   layers: Layers,
 };
 
-export function CategoryGrid() {
+export function CategoryGrid({ categories }: { categories: CategoryCard[] }) {
   return (
     <section className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-14 sm:py-20">
       <SectionHeading
@@ -65,10 +65,7 @@ export function CategoryGrid() {
                   <p className="text-xs text-ink-400">{cat.headlineLabel}</p>
                 </div>
                 {cat.trend !== "flat" && (
-                  <DeltaBadge
-                    percent={cat.trend === "up" ? 1.2 : -1.2}
-                    trend={cat.trend}
-                  />
+                  <DeltaBadge percent={cat.changePercent} trend={cat.trend} />
                 )}
               </div>
             </Link>

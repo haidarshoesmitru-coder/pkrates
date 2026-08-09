@@ -4,9 +4,9 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { SectionHeading } from "@/components/shared/section-heading";
-import { prizeBondDraws } from "@/lib/mock-data";
+import type { PrizeBondDraw } from "@/types";
 
-export function PrizeBondSection() {
+export function PrizeBondSection({ draws }: { draws: PrizeBondDraw[] }) {
   return (
     <section className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-14 sm:py-20">
       <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-6">
@@ -25,8 +25,11 @@ export function PrizeBondSection() {
         </div>
       </div>
 
+      {draws.length === 0 ? (
+        <p className="mt-8 text-sm text-ink-400">Prize bond draw information is temporarily unavailable.</p>
+      ) : (
       <div className="mt-8 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        {prizeBondDraws.map((draw) => (
+        {draws.map((draw) => (
           <Card key={`${draw.denomination}-${draw.drawNumber}`} className="p-5">
             <div className="flex items-center justify-between">
               <span className="flex h-9 w-9 items-center justify-center rounded-full bg-ink-100 dark:bg-ink-800 text-gold-600 dark:text-gold-400">
@@ -56,6 +59,7 @@ export function PrizeBondSection() {
           </Card>
         ))}
       </div>
+      )}
 
       <div className="mt-6 flex justify-end">
         <Button asChild variant="link">

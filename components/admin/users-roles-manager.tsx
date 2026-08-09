@@ -1,22 +1,51 @@
 "use client";
 
 import * as React from "react";
-import { Plus, ShieldCheck } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { Plus, ShieldCheck, Loader2 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { RoleBadge } from "@/components/admin/role-badge";
 import { cn } from "@/lib/utils";
-import { adminUsers as initialUsers, rolePermissions } from "@/lib/admin-mock-data";
-import type { AdminUser, UserRole } from "@/types/admin";
+import { rolePermissions } from "@/lib/domain-config";
+import { updateUserRoleAction } from "@/lib/data/admin-actions";
+import type { UserRole } from "@/types/admin";
 
 const roleOptions: UserRole[] = ["super_admin", "admin", "reviewer", "editor", "analyst"];
 
-export function UsersRolesManager() {
-  const [users, setUsers] = React.useState<AdminUser[]>(initialUsers);
+export interface UserRow {
+  id: string;
+  name: string;
+  email: string;
+  role: UserRole;
+  domains: string[];
+  isActive: boolean;
+  lastActive: string;
+}
 
-  function changeRole(id: string, role: UserRole) {
-    setUsers((prev) => prev.map((u) => (u.id === id ? { ...u, role } : u)));
+export function UsersRolesManager({ users, loadError }: { users: UserRow[]; loadError?: boolean }) {
+  const router = useRouter();
+  const [pendingId, setPendingId] = React.useState<string | null>(null);
+
+  async function changeRole(id: string, role: UserRole) {
+    setPendingId(id);
+    try {
+      await updateUserRoleAction(id, role);
+      router.refresh();
+    } finally {
+      setPendingId(null);
+    }
+  }
+
+  if (loadError) {
+    return (
+      <div className="p-5 sm:p-8">
+        <Card className="p-10 text-center border-fall-500/40">
+          <p className="text-sm text-ink-500 dark:text-ink-400">Couldn&rsquo;t load users. Please refresh the page.</p>
+        </Card>
+      </div>
+    );
   }
 
   return (
@@ -29,7 +58,13 @@ export function UsersRolesManager() {
         </Button>
       </div>
 
+      {users.length === 0 ? (
+        <Card className="p-10 text-center">
+          <p className="text-sm text-ink-400">No users found.</p>
+        </Card>
+      ) : (
       <Card className="overflow-hidden">
+        <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-ink-200 dark:border-ink-800 bg-ink-50 dark:bg-ink-900 text-left text-xs uppercase tracking-wide text-ink-400">
@@ -55,15 +90,19 @@ export function UsersRolesManager() {
                   </div>
                 </td>
                 <td className="px-5 py-4">
-                  <select
-                    value={user.role}
-                    onChange={(e) => changeRole(user.id, e.target.value as UserRole)}
-                    className="h-8 rounded-full border border-ink-200 dark:border-ink-700 bg-[var(--surface)] px-3 text-xs focus:outline-none"
-                  >
-                    {roleOptions.map((r) => (
-                      <option key={r} value={r}>{r.replace("_", " ")}</option>
-                    ))}
-                  </select>
+                  <div className="flex items-center gap-2">
+                    <select
+                      value={user.role}
+                      disabled={pendingId === user.id}
+                      onChange={(e) => changeRole(user.id, e.target.value as UserRole)}
+                      className="h-8 rounded-full border border-ink-200 dark:border-ink-700 bg-[var(--surface)] px-3 text-xs focus:outline-none"
+                    >
+                      {roleOptions.map((r) => (
+                        <option key={r} value={r}>{r.replace("_", " ")}</option>
+                      ))}
+                    </select>
+                    {pendingId === user.id && <Loader2 className="h-3 w-3 animate-spin text-ink-400" />}
+                  </div>
                 </td>
                 <td className="px-5 py-4">
                   <div className="flex flex-wrap gap-1 max-w-xs">
@@ -72,7 +111,7 @@ export function UsersRolesManager() {
                     ) : (
                       user.domains.map((d) => (
                         <Badge key={d} variant="outline" className="capitalize text-[10px]">
-                          {d.replace("-", " ")}
+                          {d.replace("_", " ")}
                         </Badge>
                       ))
                     )}
@@ -94,7 +133,9 @@ export function UsersRolesManager() {
             ))}
           </tbody>
         </table>
+        </div>
       </Card>
+      )}
 
       <div>
         <div className="flex items-center gap-2 mb-4">
