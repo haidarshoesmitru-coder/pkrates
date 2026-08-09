@@ -18,18 +18,22 @@ interface AdminIdentityRow {
 }
 
 async function getCurrentAdminIdentity() {
-  const supabase = await createSupabaseServerClient();
-  const { data } = await supabase
-    .from("users")
-    .select("full_name, roles(name)")
-    .eq("email", "admin@pkrates.pk")
-    .maybeSingle();
-  if (!data) return { name: "Admin", role: "admin" as UserRole };
-  const row = data as unknown as AdminIdentityRow;
-  return {
-    name: row.full_name,
-    role: (row.roles?.name ?? "admin") as UserRole,
-  };
+  try {
+    const supabase = await createSupabaseServerClient();
+    const { data } = await supabase
+      .from("users")
+      .select("full_name, roles(name)")
+      .eq("email", "admin@pkrates.pk")
+      .maybeSingle();
+    if (!data) return { name: "Admin", role: "admin" as UserRole };
+    const row = data as unknown as AdminIdentityRow;
+    return {
+      name: row.full_name,
+      role: (row.roles?.name ?? "admin") as UserRole,
+    };
+  } catch {
+    return { name: "Admin", role: "admin" as UserRole };
+  }
 }
 
 export async function AdminTopbar({ title, description }: { title: string; description?: string }) {

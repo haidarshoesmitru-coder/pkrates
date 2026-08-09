@@ -25,6 +25,7 @@ import { formatPKR } from "@/lib/utils";
 import type { Mover, CategoryCard, TrendDirection } from "@/types";
 
 export default async function HomePage() {
+  try {
   const [
     goldRates, silverRates, currencyRates, fuelPrices, cryptoRates,
     cementRates, steelRates, prizeBondDraws, goldHistoryByRange,
@@ -154,4 +155,16 @@ export default async function HomePage() {
       <NewsletterSection />
     </>
   );
+  } catch {
+    return (
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-20 text-center">
+        <h1 className="font-display text-2xl font-semibold text-ink-900 dark:text-white">
+          We&rsquo;re having trouble loading live rates
+        </h1>
+        <p className="mt-2 text-sm text-ink-500 dark:text-ink-400">
+          Please check back in a few minutes. If this keeps happening, our team has been notified.
+        </p>
+      </div>
+    );
+  }
 }

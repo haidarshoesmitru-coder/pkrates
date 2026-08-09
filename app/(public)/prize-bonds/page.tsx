@@ -16,6 +16,7 @@ export const metadata: Metadata = {
 };
 
 export default async function PrizeBondsPage() {
+  try {
   const [draws, recentResults] = await Promise.all([getPrizeBondDraws(), getRecentPrizeBondResults()]);
   const lastUpdated = new Date().toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
 
@@ -105,4 +106,16 @@ export default async function PrizeBondsPage() {
       </div>
     </>
   );
+  } catch {
+    return (
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-20 text-center">
+        <h1 className="font-display text-2xl font-semibold text-ink-900 dark:text-white">
+          Prize bond information is temporarily unavailable
+        </h1>
+        <p className="mt-2 text-sm text-ink-500 dark:text-ink-400">
+          We&rsquo;re having trouble reaching live data. Please check back shortly.
+        </p>
+      </div>
+    );
+  }
 }

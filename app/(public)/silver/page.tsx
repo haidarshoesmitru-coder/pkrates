@@ -25,6 +25,7 @@ export const metadata: Metadata = {
 };
 
 export default async function SilverRatesPage() {
+  try {
   const silverRates = await getSilverRates();
 
   if (silverRates.length === 0) {
@@ -118,4 +119,16 @@ export default async function SilverRatesPage() {
       </div>
     </>
   );
+  } catch {
+    return (
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-20 text-center">
+        <h1 className="font-display text-2xl font-semibold text-ink-900 dark:text-white">
+          Silver rates are temporarily unavailable
+        </h1>
+        <p className="mt-2 text-sm text-ink-500 dark:text-ink-400">
+          We&rsquo;re having trouble reaching live data. Please check back shortly.
+        </p>
+      </div>
+    );
+  }
 }
