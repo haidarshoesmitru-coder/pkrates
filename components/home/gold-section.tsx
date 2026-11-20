@@ -128,19 +128,19 @@ export function GoldSection({
         <div className="mt-6 grid grid-cols-3 gap-3 rounded-2xl border border-ink-200 dark:border-ink-800 bg-[var(--surface)] p-4 sm:p-5">
           <div className="text-center sm:text-left">
             <p className="text-[11px] text-ink-400">vs Yesterday</p>
-            <p className="mt-0.5 font-rate text-sm sm:text-base font-semibold text-rise-600 dark:text-pulse-400">
+            <p className={`mt-0.5 font-rate text-sm sm:text-base font-semibold ${comparison.vsYesterday.amount >= 0 ? "text-rise-600 dark:text-pulse-400" : "text-fall-600 dark:text-red-300"}`}>
               {comparison.vsYesterday.amount >= 0 ? "+" : ""}Rs {formatPKR(comparison.vsYesterday.amount)} ({comparison.vsYesterday.percent}%)
             </p>
           </div>
           <div className="text-center sm:text-left border-x border-ink-200 dark:border-ink-800">
             <p className="text-[11px] text-ink-400">vs Last Week</p>
-            <p className="mt-0.5 font-rate text-sm sm:text-base font-semibold text-rise-600 dark:text-pulse-400">
+            <p className={`mt-0.5 font-rate text-sm sm:text-base font-semibold ${comparison.vsLastWeek.amount >= 0 ? "text-rise-600 dark:text-pulse-400" : "text-fall-600 dark:text-red-300"}`}>
               {comparison.vsLastWeek.amount >= 0 ? "+" : ""}Rs {formatPKR(comparison.vsLastWeek.amount)} ({comparison.vsLastWeek.percent}%)
             </p>
           </div>
           <div className="text-center sm:text-left">
             <p className="text-[11px] text-ink-400">vs Last Month</p>
-            <p className="mt-0.5 font-rate text-sm sm:text-base font-semibold text-rise-600 dark:text-pulse-400">
+            <p className={`mt-0.5 font-rate text-sm sm:text-base font-semibold ${comparison.vsLastMonth.amount >= 0 ? "text-rise-600 dark:text-pulse-400" : "text-fall-600 dark:text-red-300"}`}>
               {comparison.vsLastMonth.amount >= 0 ? "+" : ""}Rs {formatPKR(comparison.vsLastMonth.amount)} ({comparison.vsLastMonth.percent}%)
             </p>
           </div>

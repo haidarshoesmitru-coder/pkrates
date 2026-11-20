@@ -15,6 +15,7 @@ export interface GoldCityRate {
   changePercent: number;
   trend: TrendDirection;
   sparkline: number[];
+  effectiveAt?: string;
 }
 
 /** Mirrors GoldCityRate's shape exactly; Silver is quoted by
@@ -28,6 +29,7 @@ export interface SilverCityRate {
   changePercent: number;
   trend: TrendDirection;
   sparkline: number[];
+  effectiveAt?: string;
 }
 
 export interface CurrencyRate {
@@ -40,6 +42,7 @@ export interface CurrencyRate {
   openSell: number;
   changePercent: number;
   trend: TrendDirection;
+  effectiveAt?: string;
 }
 
 export interface FuelPrice {
@@ -49,6 +52,7 @@ export interface FuelPrice {
   changePercent: number;
   trend: TrendDirection;
   effectiveFrom: string;
+  effectiveAt?: string;
   nextReviewEstimate: string;
 }
 
@@ -59,6 +63,7 @@ export interface CementCityRate {
   changePercent: number;
   trend: TrendDirection;
   sparkline: number[];
+  effectiveAt?: string;
 }
 
 export interface SteelCityRate {
@@ -69,6 +74,7 @@ export interface SteelCityRate {
   changePercent: number;
   trend: TrendDirection;
   sparkline: number[];
+  effectiveAt?: string;
 }
 
 export interface CryptoRate {
@@ -79,6 +85,7 @@ export interface CryptoRate {
   changePercent: number;
   trend: TrendDirection;
   sparkline: number[];
+  effectiveAt?: string;
 }
 
 export interface PrizeBondDraw {

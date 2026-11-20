@@ -20,7 +20,10 @@ function computeTrendFromHistory(history: number[]): {
   if (history.length === 0) {
     return { changeAmount: 0, changePercent: 0, trend: "flat", sparkline: [] };
   }
-  const [latest, previous] = history;
+  const [latest] = history;
+  // Skip consecutive duplicate rows (same value re-published) so Change
+  // compares against the last DIFFERENT value, matching vs-Yesterday.
+  const previous = history.slice(1).find((v) => v !== latest);
   const changeAmount = previous !== undefined ? Math.round((latest - previous) * 100) / 100 : 0;
   const changePercent =
     previous ? Math.round(((latest - previous) / previous) * 10000) / 100 : 0;
@@ -40,18 +43,18 @@ function computeTrendFromHistory(history: number[]): {
  * it, which is what was happening here before this fix.
  */
 interface CurrentGoldRateRow { city_id: number; karat_id: number; rate_per_tola: number }
-interface GoldHistoryRow { city_id: number; karat_id: number; rate_per_tola: number }
+interface GoldHistoryRow { city_id: number; karat_id: number; rate_per_tola: number; effective_at: string }
 interface CurrentSilverRateRow { city_id: number; purity_id: number; rate_per_tola: number }
-interface SilverHistoryRow { city_id: number; purity_id: number; rate_per_tola: number }
+interface SilverHistoryRow { city_id: number; purity_id: number; rate_per_tola: number; effective_at: string }
 interface CurrentCurrencyRateRow { currency_id: number; rate_type: "interbank" | "open_market"; buy_rate: number; sell_rate: number }
-interface CurrencyHistoryRow { currency_id: number; rate_type: "interbank" | "open_market"; sell_rate: number }
+interface CurrencyHistoryRow { currency_id: number; rate_type: "interbank" | "open_market"; sell_rate: number; effective_at: string }
 interface CurrentFuelPriceRow { fuel_type_id: number; price_per_liter: number; change_amount: number | null; effective_from: string }
 interface CurrentCryptoRateRow { coin_id: number; price_usd: number; price_pkr: number }
-interface CryptoHistoryRow { coin_id: number; price_pkr: number }
+interface CryptoHistoryRow { coin_id: number; price_pkr: number; effective_at: string }
 interface CurrentCementRateRow { brand_id: number; city_id: number; price_per_bag: number }
-interface CementHistoryRow { brand_id: number; city_id: number; price_per_bag: number }
+interface CementHistoryRow { brand_id: number; city_id: number; price_per_bag: number; effective_at: string }
 interface CurrentSteelRateRow { grade_id: number; city_id: number; price_per_maund: number; price_per_ton: number }
-interface SteelHistoryRow { grade_id: number; city_id: number; price_per_ton: number }
+interface SteelHistoryRow { grade_id: number; city_id: number; price_per_ton: number; effective_at: string }
 
 // ---------------------------------------------------------------
 // Gold
@@ -88,13 +91,14 @@ export async function getGoldRates(): Promise<GoldCityRate[]> {
         .filter((h) => h.city_id === city.id && h.karat_id === karat24?.id)
         .map((h) => h.rate_per_tola);
       const { changeAmount, changePercent, trend, sparkline } = computeTrendFromHistory(cityHistory);
+      const effectiveAt = history.find((h) => h.city_id === city.id && h.karat_id === karat24?.id)?.effective_at;
       return {
         city: city.name,
         karat24: karatByLabel(city.id, "24K"),
         karat22: karatByLabel(city.id, "22K"),
         karat21: karatByLabel(city.id, "21K"),
         karat18: karatByLabel(city.id, "18K"),
-        changeAmount, changePercent, trend, sparkline,
+        changeAmount, changePercent, trend, sparkline, effectiveAt,
       };
     });
 }
@@ -133,11 +137,12 @@ export async function getSilverRates(): Promise<SilverCityRate[]> {
         .filter((h) => h.city_id === city.id && h.purity_id === fine999?.id)
         .map((h) => h.rate_per_tola);
       const { changeAmount, changePercent, trend, sparkline } = computeTrendFromHistory(cityHistory);
+      const effectiveAt = history.find((h) => h.city_id === city.id && h.purity_id === fine999?.id)?.effective_at;
       return {
         city: city.name,
         fine999: valueFor(city.id, fine999?.id),
         sterling925: valueFor(city.id, sterling925?.id),
-        changeAmount, changePercent, trend, sparkline,
+        changeAmount, changePercent, trend, sparkline, effectiveAt,
       };
     });
 }
@@ -178,6 +183,7 @@ export async function getCurrencyRates(rateType: "interbank" | "open_market" = "
         .filter((h) => h.currency_id === currency.id && h.rate_type === rateType)
         .map((h) => h.sell_rate);
       const { changePercent, trend } = computeTrendFromHistory(currencyHistory);
+      const effectiveAt = history.find((h) => h.currency_id === currency.id && h.rate_type === rateType)?.effective_at;
       return {
         code: currency.code,
         name: currency.name,
@@ -186,7 +192,7 @@ export async function getCurrencyRates(rateType: "interbank" | "open_market" = "
         interbankSell: interbankRow?.sell_rate ?? 0,
         openBuy: openRow?.buy_rate ?? 0,
         openSell: openRow?.sell_rate ?? 0,
-        changePercent, trend,
+        changePercent, trend, effectiveAt,
       };
     });
 }
@@ -219,6 +225,7 @@ export async function getFuelPrices(): Promise<FuelPrice[]> {
         changePercent,
         trend: (changeAmount > 0 ? "up" : changeAmount < 0 ? "down" : "flat") as TrendDirection,
         effectiveFrom: effectiveDate.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }),
+        effectiveAt: row.effective_from,
         nextReviewEstimate: "Per next OGRA notification",
       };
     });
@@ -249,12 +256,13 @@ export async function getCryptoRates(): Promise<CryptoRate[]> {
       const row = current.find((r) => r.coin_id === coin.id)!;
       const coinHistory = history.filter((h) => h.coin_id === coin.id).map((h) => h.price_pkr);
       const { changePercent, trend, sparkline } = computeTrendFromHistory(coinHistory);
+      const effectiveAt = history.find((h) => h.coin_id === coin.id)?.effective_at;
       return {
         symbol: coin.symbol,
         name: coin.name,
         priceUsd: row.price_usd,
         pricePkr: row.price_pkr,
-        changePercent, trend, sparkline,
+        changePercent, trend, sparkline, effectiveAt,
       };
     });
 }
@@ -288,11 +296,12 @@ export async function getCementRates(): Promise<CementCityRate[]> {
       .filter((h) => h.brand_id === row.brand_id && h.city_id === row.city_id)
       .map((h) => h.price_per_bag);
     const { changePercent, trend, sparkline } = computeTrendFromHistory(pairHistory);
+    const effectiveAt = history.find((h) => h.brand_id === row.brand_id && h.city_id === row.city_id)?.effective_at;
     return {
       brand: brand?.name ?? "Unknown brand",
       city: city?.name ?? "Unknown city",
       pricePerBag: row.price_per_bag,
-      changePercent, trend, sparkline,
+      changePercent, trend, sparkline, effectiveAt,
     };
   });
 }
@@ -326,12 +335,13 @@ export async function getSteelRates(): Promise<SteelCityRate[]> {
       .filter((h) => h.grade_id === row.grade_id && h.city_id === row.city_id)
       .map((h) => h.price_per_ton);
     const { changePercent, trend, sparkline } = computeTrendFromHistory(pairHistory);
+    const effectiveAt = history.find((h) => h.grade_id === row.grade_id && h.city_id === row.city_id)?.effective_at;
     return {
       grade: grade?.label ?? "Unknown grade",
       city: city?.name ?? "Unknown city",
       pricePerMaund: row.price_per_maund,
       pricePerTon: row.price_per_ton,
-      changePercent, trend, sparkline,
+      changePercent, trend, sparkline, effectiveAt,
     };
   });
 }

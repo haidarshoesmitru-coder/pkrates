@@ -64,7 +64,7 @@ export default async function PetrolPricesPage() {
     fuelPrices[0].pricePerLiter,
     "effective_from"
   );
-  const lastUpdated = computeLastUpdatedLabel(fuelPrices.map(() => new Date().toISOString()));
+  const lastUpdated = computeLastUpdatedLabel(fuelPrices.map((r) => r.effectiveAt ?? ""));
 
   return (
     <>

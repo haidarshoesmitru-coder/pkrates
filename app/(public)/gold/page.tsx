@@ -44,7 +44,7 @@ export default async function GoldRatesPage() {
     { karat_id: karat24Id ?? -1, city_id: karachiId ?? -1, status: "published" },
     goldRates[0].karat24
   );
-  const lastUpdated = computeLastUpdatedLabel(goldRates.map(() => new Date().toISOString()));
+  const lastUpdated = computeLastUpdatedLabel(goldRates.map((r) => r.effectiveAt ?? ""));
 
   return (
     <>
@@ -90,7 +90,37 @@ export default async function GoldRatesPage() {
             </table>
           </div>
           </Card>
-          <p className="mt-3 text-xs text-ink-400">Also available: 22K, 21K and 18K rates for each city above.</p>
+          {([["22K", "karat22"], ["21K", "karat21"], ["18K", "karat18"]] as const).map(([label, key]) => (
+            <section key={label} className="mt-10">
+              <h2 className="font-display text-lg font-semibold text-ink-900 dark:text-ink-100 mb-4">
+                {label} Gold Rate by City
+              </h2>
+              <Card className="overflow-hidden">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-ink-200 dark:border-ink-800 bg-ink-50 dark:bg-ink-900 text-left text-xs uppercase tracking-wide text-ink-400">
+                        <th className="px-5 py-3 font-medium">City</th>
+                        <th className="px-5 py-3 font-medium text-right">Per Tola</th>
+                        <th className="px-5 py-3 font-medium text-right">Per 10g</th>
+                        <th className="px-5 py-3 font-medium text-right">Per Gram</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-ink-200 dark:divide-ink-800">
+                      {goldRates.map((r) => (
+                        <tr key={`${label}-${r.city}`} className="hover:bg-ink-50 dark:hover:bg-ink-900/60 transition-colors">
+                          <td className="px-5 py-4 font-medium text-ink-900 dark:text-ink-100">{r.city}</td>
+                          <td className="px-5 py-4 text-right font-rate font-semibold text-ink-950 dark:text-white">Rs {formatPKR(r[key])}</td>
+                          <td className="px-5 py-4 text-right font-rate text-ink-600 dark:text-ink-300">Rs {formatPKR(r[key] / 11.6638038 * 10)}</td>
+                          <td className="px-5 py-4 text-right font-rate text-ink-600 dark:text-ink-300">Rs {formatPKR(r[key] / 11.6638038)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </Card>
+            </section>
+          ))}
         </section>
 
         <section className="grid grid-cols-1 lg:grid-cols-2 gap-6">

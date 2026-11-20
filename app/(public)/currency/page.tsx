@@ -59,7 +59,7 @@ export default async function CurrencyRatesPage() {
     { currency_id: usdId ?? -1, rate_type: "open_market", status: "published" },
     currencyRates[0].openSell
   );
-  const lastUpdated = computeLastUpdatedLabel(currencyRates.map(() => new Date().toISOString()));
+  const lastUpdated = computeLastUpdatedLabel(currencyRates.map((r) => r.effectiveAt ?? ""));
 
   return (
     <>

@@ -31,12 +31,20 @@ export default async function HomePage() {
     cementRates, steelRates, prizeBondDraws, goldHistoryByRange,
     activeSources, karats, cities,
   ] = await Promise.all([
-    getGoldRates(), getSilverRates(), getCurrencyRates("open_market"), getFuelPrices(), getCryptoRates(),
+    getGoldRates(), getSilverRates(), getCurrencyRates("interbank"), getFuelPrices(), getCryptoRates(),
     getCementRates(), getSteelRates(), getPrizeBondDraws(), getGoldHistoryByRange(),
     getActiveSources(), getGoldKarats(), getCities(),
   ]);
 
-  const lastUpdated = computeLastUpdatedLabel([new Date().toISOString()]);
+  const lastUpdated = computeLastUpdatedLabel([
+    ...goldRates.map((r) => r.effectiveAt ?? ""),
+    ...silverRates.map((r) => r.effectiveAt ?? ""),
+    ...currencyRates.map((r) => r.effectiveAt ?? ""),
+    ...fuelPrices.map((r) => r.effectiveAt ?? ""),
+    ...cryptoRates.map((r) => r.effectiveAt ?? ""),
+    ...cementRates.map((r) => r.effectiveAt ?? ""),
+    ...steelRates.map((r) => r.effectiveAt ?? ""),
+  ]);
 
   const karat24Id = karats.find((k) => k.label === "24K")?.id;
   const karachiId = cities.find((c) => c.name === "Karachi")?.id;

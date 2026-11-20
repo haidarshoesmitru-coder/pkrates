@@ -285,11 +285,12 @@ export async function getPublishedRecords(domain: string): Promise<PublishedReco
   const adapter = ADAPTERS[domain];
   if (!adapter) return [];
 
+  const orderColumn = domain === "petrol" ? "effective_from" : "effective_at";
   const { data, error } = await supabase
     .from(adapter.factTable)
     .select("*")
     .eq("status", "published")
-    .order("effective_at", { ascending: false })
+    .order(orderColumn, { ascending: false })
     .limit(20);
   if (error) throw error;
   const rows = (data ?? []) as Record<string, unknown>[];
@@ -300,7 +301,7 @@ export async function getPublishedRecords(domain: string): Promise<PublishedReco
     status: "published",
     sourceName: sources.find((s) => s.id === row.source_id)?.name ?? "Unknown",
     approvedBy: (row.approved_by as string) ?? "—",
-    effectiveAt: new Date(row.effective_at as string).toLocaleString("en-GB"),
+    effectiveAt: new Date((row.effective_at ?? row.effective_from) as string).toLocaleString("en-GB"),
   }));
 }
 
@@ -351,7 +352,7 @@ export async function submitRate(domain: string, values: Record<string, string>,
   const supabase = createSupabaseAdminClient();
   const payload = adapter.buildInsert(values, refs, sourceId, systemAdmin.id);
   const { error } = await asMutationClient(supabase).from(adapter.submissionTable).insert(payload);
-  if (error) throw error;
+  if (error) throw new Error(`Submit failed (${domain}): ${error.message}`);
 }
 
 export async function approveSubmission(domain: string, submissionId: string) {
@@ -364,7 +365,7 @@ export async function approveSubmission(domain: string, submissionId: string) {
   // entry atomically — see supabase/migrations/20260719091000 and
   // 20260719091700.
   const { error } = await asMutationClient(supabase).from(table).update({ status: "approved", reviewed_by: systemAdmin.id }).eq("id", submissionId);
-  if (error) throw error;
+  if (error) throw new Error(`Approve failed (${domain}): ${error.message}`);
 }
 
 export async function rejectSubmission(domain: string, submissionId: string, notes: string) {
@@ -376,7 +377,7 @@ export async function rejectSubmission(domain: string, submissionId: string, not
     .from(table)
     .update({ status: "rejected", reviewed_by: systemAdmin.id, reviewer_notes: notes || "Rejected via admin panel" })
     .eq("id", submissionId);
-  if (error) throw error;
+  if (error) throw new Error(`Reject failed (${domain}): ${error.message}`);
 }
 
 export { domainNameToRlsDomain };
