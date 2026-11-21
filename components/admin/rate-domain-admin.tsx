@@ -66,7 +66,8 @@ export function RateDomainAdmin({
     setActionError(null);
     setIsSubmitting(true);
     try {
-      await submitRateAction(domain, formValues, formSourceId);
+      const result = await submitRateAction(domain, formValues, formSourceId);
+      if (result?.error) { setActionError(result.error); return; }
       setFormValues({});
       setShowForm(false);
       router.refresh();
@@ -81,7 +82,8 @@ export function RateDomainAdmin({
     setActionError(null);
     setPendingActionId(sub.id);
     try {
-      await approveSubmissionAction(domain, sub.id);
+      const result = await approveSubmissionAction(domain, sub.id);
+      if (result?.error) { setActionError(result.error); return; }
       router.refresh();
     } catch (err) {
       setActionError(err instanceof Error ? err.message : "Failed to approve — please try again.");
@@ -94,7 +96,8 @@ export function RateDomainAdmin({
     setActionError(null);
     setPendingActionId(sub.id);
     try {
-      await rejectSubmissionAction(domain, sub.id, reviewNotes[sub.id] ?? "");
+      const result = await rejectSubmissionAction(domain, sub.id, reviewNotes[sub.id] ?? "");
+      if (result?.error) { setActionError(result.error); return; }
       router.refresh();
     } catch (err) {
       setActionError(err instanceof Error ? err.message : "Failed to reject — please try again.");
