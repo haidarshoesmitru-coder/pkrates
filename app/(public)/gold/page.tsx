@@ -91,7 +91,43 @@ export default async function GoldRatesPage() {
             </table>
           </div>
           </Card>
-          <p className="mt-3 text-xs text-ink-400">Also available: 22K, 21K and 18K rates for each city above.</p>
+          {([
+            { label: "22K", field: "karat22" as const },
+            { label: "21K", field: "karat21" as const },
+            { label: "18K", field: "karat18" as const },
+          ]).map(({ label, field }) =>
+            goldRates.some((r) => r[field] > 0) ? (
+              <div key={label} className="mt-8">
+                <h3 className="font-display text-base font-semibold text-ink-900 dark:text-ink-100 mb-3">
+                  {label} Gold Rate by City
+                </h3>
+                <Card className="overflow-hidden">
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="border-b border-ink-200 dark:border-ink-800 bg-ink-50 dark:bg-ink-900 text-left text-xs uppercase tracking-wide text-ink-400">
+                          <th className="sticky left-0 z-10 px-5 py-3 font-medium bg-ink-50 dark:bg-ink-900">City</th>
+                          <th className="px-5 py-3 font-medium text-right">Per Tola</th>
+                          <th className="px-5 py-3 font-medium text-right">Per 10g</th>
+                          <th className="px-5 py-3 font-medium text-right">Per Gram</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-ink-200 dark:divide-ink-800">
+                        {goldRates.filter((r) => r[field] > 0).map((r) => (
+                          <tr key={r.city} className="hover:bg-ink-50 dark:hover:bg-ink-900/60 transition-colors">
+                            <td className="sticky left-0 z-10 px-5 py-4 font-medium text-ink-900 dark:text-ink-100 bg-[var(--surface)]">{r.city}</td>
+                            <td className="px-5 py-4 text-right font-rate font-semibold text-ink-950 dark:text-white">Rs {formatPKR(r[field])}</td>
+                            <td className="px-5 py-4 text-right font-rate text-ink-600 dark:text-ink-300">Rs {formatPKR(r[field] / 11.6638038 * 10)}</td>
+                            <td className="px-5 py-4 text-right font-rate text-ink-600 dark:text-ink-300">Rs {formatPKR(r[field] / 11.6638038)}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </Card>
+              </div>
+            ) : null
+          )}
         </section>
 
         <section className="grid grid-cols-1 lg:grid-cols-2 gap-6">

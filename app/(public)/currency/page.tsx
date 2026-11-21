@@ -23,6 +23,7 @@ export const metadata: Metadata = {
 export default async function CurrencyRatesPage() {
   try {
   const currencyRates = await getCurrencyRates("open_market");
+  const interbankRates = await getCurrencyRates("interbank");
 
   if (currencyRates.length === 0) {
     return (
@@ -112,6 +113,46 @@ export default async function CurrencyRatesPage() {
           </div>
           </Card>
           <p className="mt-3 text-xs text-ink-400">Interbank rates typically run a small premium below open market — see the FAQ below for the difference.</p>
+
+          {interbankRates.length > 0 && (
+            <div className="mt-8">
+              <h3 className="font-display text-base font-semibold text-ink-900 dark:text-ink-100 mb-3">
+                Interbank Rates (State Bank of Pakistan)
+              </h3>
+              <Card className="overflow-hidden">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-ink-200 dark:border-ink-800 bg-ink-50 dark:bg-ink-900 text-left text-xs uppercase tracking-wide text-ink-400">
+                        <th className="sticky left-0 z-10 px-5 py-3 font-medium bg-ink-50 dark:bg-ink-900">Currency</th>
+                        <th className="px-5 py-3 font-medium text-right">Buy</th>
+                        <th className="px-5 py-3 font-medium text-right">Sell</th>
+                        <th className="px-5 py-3 font-medium text-right">Change</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-ink-200 dark:divide-ink-800">
+                      {interbankRates.map((c) => (
+                        <tr key={c.code} className="hover:bg-ink-50 dark:hover:bg-ink-900/60 transition-colors">
+                          <td className="sticky left-0 z-10 px-5 py-4 bg-[var(--surface)]">
+                            <div className="flex items-center gap-2.5">
+                              <span className="text-lg leading-none">{c.flag}</span>
+                              <div>
+                                <p className="font-medium text-ink-900 dark:text-ink-100">{c.code}</p>
+                                <p className="text-xs text-ink-400">{c.name}</p>
+                              </div>
+                            </div>
+                          </td>
+                          <td className="px-5 py-4 text-right font-rate text-ink-700 dark:text-ink-200">{formatPKR(c.interbankBuy, { decimals: 2 })}</td>
+                          <td className="px-5 py-4 text-right font-rate font-semibold text-ink-950 dark:text-white">{formatPKR(c.interbankSell, { decimals: 2 })}</td>
+                          <td className="px-5 py-4 text-right"><DeltaBadge percent={c.changePercent} trend={c.trend} className="ml-auto" /></td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </Card>
+            </div>
+          )}
         </section>
 
         <section className="grid grid-cols-1 lg:grid-cols-2 gap-6">

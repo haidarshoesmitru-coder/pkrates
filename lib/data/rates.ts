@@ -20,7 +20,10 @@ function computeTrendFromHistory(history: number[]): {
   if (history.length === 0) {
     return { changeAmount: 0, changePercent: 0, trend: "flat", sparkline: [] };
   }
-  const [latest, previous] = history;
+  const latest = history[0];
+  // Compare against the last DIFFERENT value: duplicate same-value rows
+  // (re-published unchanged rates) must not read as 0% change.
+  const previous = history.find((v, i) => i > 0 && v !== latest);
   const changeAmount = previous !== undefined ? Math.round((latest - previous) * 100) / 100 : 0;
   const changePercent =
     previous ? Math.round(((latest - previous) / previous) * 10000) / 100 : 0;
