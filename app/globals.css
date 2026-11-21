@@ -1,0 +1,150 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+/* ---------------------------------------------------------------------
+   PKRates Design System
+   Signature: tabular-numeral "ticker" treatment for every rate figure,
+   a pulse-line motif for live-data moments, and an ink/paper palette
+   accented with antique gold (rates) and pulse green (brand/trend-up).
+--------------------------------------------------------------------- */
+
+@custom-variant dark (&:is(.dark *));
+
+@theme {
+  --font-display: "Space Grotesk", ui-sans-serif, system-ui, sans-serif;
+  --font-body: "IBM Plex Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", monospace;
+
+  /* Brand */
+  --color-pulse-50: #ecfaf4;
+  --color-pulse-100: #d1f2e3;
+  --color-pulse-200: #a3e5c8;
+  --color-pulse-300: #6bd1aa;
+  --color-pulse-400: #38b787;
+  --color-pulse-500: #17966c;
+  --color-pulse-600: #0f6b4f;
+  --color-pulse-700: #0d5641;
+  --color-pulse-800: #0c4535;
+  --color-pulse-900: #0a392c;
+  --color-pulse-950: #05201a;
+
+  /* Gold accent (for gold-rate emphasis) */
+  --color-gold-50: #fbf6ea;
+  --color-gold-100: #f4e8c8;
+  --color-gold-200: #ead39a;
+  --color-gold-300: #dfbb6c;
+  --color-gold-400: #d3a54a;
+  --color-gold-500: #c89b3c;
+  --color-gold-600: #a67c2c;
+  --color-gold-700: #815f23;
+  --color-gold-800: #5f461c;
+  --color-gold-900: #443317;
+
+  /* Signal colors */
+  --color-rise-500: #17966c;
+  --color-rise-600: #0f6b4f;
+  --color-fall-500: #c1443d;
+  --color-fall-600: #a3352f;
+
+  /* Ink / paper neutrals */
+  --color-ink-50: #f7f6f3;
+  --color-ink-100: #edebe4;
+  --color-ink-200: #ded9cd;
+  --color-ink-300: #c2bcac;
+  --color-ink-400: #96907d;
+  --color-ink-500: #706a59;
+  --color-ink-600: #524d40;
+  --color-ink-700: #3a362c;
+  --color-ink-800: #24221c;
+  --color-ink-900: #16150f;
+  --color-ink-950: #0b0f0e;
+
+  --shadow-card: 0 1px 2px 0 rgb(20 23 20 / 0.04), 0 1px 8px -2px rgb(20 23 20 / 0.06);
+  --shadow-card-hover: 0 4px 14px -2px rgb(20 23 20 / 0.10), 0 2px 6px -2px rgb(20 23 20 / 0.06);
+
+  --animate-pulse-ring: pulse-ring 2.2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  --animate-ticker: ticker 32s linear infinite;
+
+  @keyframes pulse-ring {
+    0% {
+      box-shadow: 0 0 0 0 rgb(23 150 108 / 0.45);
+    }
+    70% {
+      box-shadow: 0 0 0 7px rgb(23 150 108 / 0);
+    }
+    100% {
+      box-shadow: 0 0 0 0 rgb(23 150 108 / 0);
+    }
+  }
+
+  @keyframes ticker {
+    0% {
+      transform: translateX(0);
+    }
+    100% {
+      transform: translateX(-50%);
+    }
+  }
+}
+
+:root {
+  --background: var(--color-ink-50);
+  --foreground: var(--color-ink-900);
+  --surface: #ffffff;
+  --surface-muted: var(--color-ink-100);
+  --border-subtle: var(--color-ink-200);
+}
+
+.dark {
+  --background: var(--color-ink-950);
+  --foreground: var(--color-ink-100);
+  --surface: #10140f;
+  --surface-muted: var(--color-ink-900);
+  --border-subtle: #232922;
+}
+
+* {
+  border-color: var(--border-subtle);
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background-color: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-body);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Tabular numerals everywhere a rate is displayed */
+.font-rate {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1, "zero" 1;
+  letter-spacing: -0.01em;
+}
+
+::selection {
+  background-color: var(--color-pulse-300);
+  color: var(--color-ink-950);
+}
+
+/* Visible keyboard focus everywhere */
+:focus-visible {
+  outline: 2px solid var(--color-pulse-500);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
