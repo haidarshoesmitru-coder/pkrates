@@ -122,6 +122,7 @@ export interface Database {
       prize_bond_draw_submissions: { Row: PrizeBondDrawSubmissionRow; Insert: PrizeBondDrawSubmissionInsert; Update: Partial<PrizeBondDrawSubmissionRow>; Relationships: [] };
       prize_bond_winners: { Row: PrizeBondWinnerRow; Insert: Partial<PrizeBondWinnerRow>; Update: Partial<PrizeBondWinnerRow>; Relationships: [] };
       prize_bond_winner_submissions: { Row: PrizeBondWinnerSubmissionRow; Insert: PrizeBondWinnerSubmissionInsert; Update: Partial<PrizeBondWinnerSubmissionRow>; Relationships: [] };
+      posts: { Row: PostRow; Insert: Partial<PostRow>; Update: Partial<PostRow>; Relationships: [] };
     };
     Views: {
       current_gold_rates: { Row: { id: string; city_id: number; karat_id: number; rate_per_tola: number; rate_per_10g: number; rate_per_gram: number; effective_at: string; source_id: string }; Relationships: [] };
@@ -239,6 +240,12 @@ interface PrizeBondWinnerSubmissionRow {
   reviewed_by: string | null; reviewed_at: string | null; submitted_at: string;
 }
 type PrizeBondWinnerSubmissionInsert = Pick<PrizeBondWinnerSubmissionRow, "draw_id" | "source_id" | "winners_payload" | "submitted_by">;
+
+export interface PostRow {
+  id: string; post_type: "news" | "blog"; slug: string; title: string;
+  excerpt: string | null; body: string; status: "draft" | "published";
+  published_at: string | null; created_at: string; updated_at: string;
+}
 
 export interface SourceRow {
   id: string; name: string;

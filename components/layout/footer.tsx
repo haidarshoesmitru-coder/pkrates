@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { Activity, Mail } from "lucide-react";
+import Image from "next/image";
+import { Mail } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 
 const columns = [
@@ -23,7 +24,9 @@ const columns = [
   {
     title: "Company",
     links: [
-      { href: "/sources", label: "Our Sources & Methodology" },
+      { href: "/news", label: "Rates News" },
+      { href: "/blog", label: "Guides & Blog" },
+      { href: "/sources", label: "Sources & Methodology" },
       { href: "/about", label: "About PKRates" },
       { href: "/contact", label: "Contact" },
     ],
@@ -37,9 +40,13 @@ export function Footer() {
         <div className="grid grid-cols-2 gap-10 md:grid-cols-6">
           <div className="col-span-2 md:col-span-2">
             <Link href="/" className="flex items-center gap-2">
-              <span className="flex h-8 w-8 items-center justify-center rounded-full bg-pulse-600 text-white">
-                <Activity className="h-4 w-4" strokeWidth={2.5} />
-              </span>
+              <Image
+                src="/logo.png"
+                alt="PKRates logo"
+                width={44}
+                height={44}
+                className="h-11 w-11 rounded-full"
+              />
               <span className="font-display text-lg font-semibold tracking-tight">
                 PK<span className="text-pulse-600 dark:text-pulse-400">Rates</span>
               </span>

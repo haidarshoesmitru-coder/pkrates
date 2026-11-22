@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { submitRate, approveSubmission, rejectSubmission, toggleSourceAutoPublish, updateUserRole, submitPrizeBondWinners, approveWinnerSubmission, rejectWinnerSubmission } from "@/lib/data/admin";
+import { savePost, deletePost, type PostInput } from "@/lib/data/posts";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export async function signOutAction() {
@@ -95,4 +96,30 @@ export async function toggleSourceAutoPublishAction(sourceId: string, allow: boo
 export async function updateUserRoleAction(userId: string, roleName: string) {
   await updateUserRole(userId, roleName);
   revalidatePath("/admin/users");
+}
+
+export async function savePostAction(input: PostInput): Promise<{ error?: string }> {
+  try {
+    await savePost(input);
+  } catch (err) {
+    return { error: err instanceof Error ? err.message : "Save failed." };
+  }
+  revalidatePath("/admin/posts");
+  revalidatePath("/news");
+  revalidatePath("/blog");
+  revalidatePath("/");
+  return {};
+}
+
+export async function deletePostAction(id: string): Promise<{ error?: string }> {
+  try {
+    await deletePost(id);
+  } catch (err) {
+    return { error: err instanceof Error ? err.message : "Delete failed." };
+  }
+  revalidatePath("/admin/posts");
+  revalidatePath("/news");
+  revalidatePath("/blog");
+  revalidatePath("/");
+  return {};
 }

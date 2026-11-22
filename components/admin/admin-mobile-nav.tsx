@@ -14,6 +14,7 @@ import {
   ScrollText,
   History,
   Users,
+  Newspaper,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -29,6 +30,7 @@ const items = [
   { href: "/admin/audit-log", label: "Audit Log", icon: ScrollText },
   { href: "/admin/history", label: "History", icon: History },
   { href: "/admin/users", label: "Users", icon: Users },
+  { href: "/admin/posts", label: "News & Blog", icon: Newspaper },
 ];
 
 export function AdminMobileNav() {

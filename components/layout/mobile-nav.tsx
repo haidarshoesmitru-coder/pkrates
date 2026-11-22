@@ -2,7 +2,8 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { Menu, Activity, ChevronRight } from "lucide-react";
+import Image from "next/image";
+import { Menu, ChevronRight } from "lucide-react";
 import {
   Sheet,
   SheetContent,
@@ -31,9 +32,13 @@ export function MobileNav({ links }: { links: NavLink[] }) {
       <SheetContent>
         <SheetHeader>
           <SheetTitle className="flex items-center gap-2">
-            <span className="flex h-7 w-7 items-center justify-center rounded-full bg-pulse-600 text-white">
-              <Activity className="h-3.5 w-3.5" strokeWidth={2.5} />
-            </span>
+            <Image
+              src="/logo.png"
+              alt="PKRates logo"
+              width={32}
+              height={32}
+              className="h-8 w-8 rounded-full"
+            />
             PKRates
           </SheetTitle>
         </SheetHeader>

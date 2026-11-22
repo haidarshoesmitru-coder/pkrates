@@ -2,7 +2,8 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { Activity, Star, ChevronDown } from "lucide-react";
+import Image from "next/image";
+import { Star, ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/theme-toggle";
@@ -30,7 +31,11 @@ const navGroups = [
   },
 ];
 
-const flatLinks = [{ href: "/prize-bonds", label: "Prize Bonds" }];
+const flatLinks = [
+  { href: "/prize-bonds", label: "Prize Bonds" },
+  { href: "/news", label: "News" },
+  { href: "/blog", label: "Blog" },
+];
 
 function NavGroupMenu({ group }: { group: (typeof navGroups)[number] }) {
   const [open, setOpen] = React.useState(false);
@@ -91,9 +96,14 @@ export function Navbar() {
     >
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
         <Link href="/" className="flex items-center gap-2 shrink-0">
-          <span className="flex h-8 w-8 items-center justify-center rounded-full bg-pulse-600 text-white">
-            <Activity className="h-4 w-4" strokeWidth={2.5} />
-          </span>
+          <Image
+            src="/logo.png"
+            alt="PKRates logo"
+            width={40}
+            height={40}
+            className="h-10 w-10 rounded-full"
+            priority
+          />
           <span className="font-display text-lg font-semibold tracking-tight text-ink-900 dark:text-ink-50">
             PK<span className="text-pulse-600 dark:text-pulse-400">Rates</span>
           </span>
