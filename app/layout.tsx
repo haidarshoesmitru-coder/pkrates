@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import { Space_Grotesk, IBM_Plex_Sans, IBM_Plex_Mono } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
+import { getSiteUrl } from "@/lib/site-url";
 
 const spaceGrotesk = Space_Grotesk({
   subsets: ["latin"],
@@ -25,6 +26,10 @@ const plexMono = IBM_Plex_Mono({
 });
 
 export const metadata: Metadata = {
+  // Resolves any relative canonical/OG URLs against the real
+  // public origin (see lib/site-url.ts) instead of a hardcoded
+  // domain that may not serve this deployment.
+  metadataBase: new URL(getSiteUrl()),
   title: "PKRates — Pakistan's Financial Pulse",
   description:
     "Live gold, currency, petrol, crypto, prize bond, cement and steel rates for Pakistan — verified, timestamped, city-wise.",
