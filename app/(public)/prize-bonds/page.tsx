@@ -1,13 +1,43 @@
 import type { Metadata } from "next";
-import { Search, Ticket } from "lucide-react";
+import { Ticket } from "lucide-react";
 import { CategoryPageHeader } from "@/components/rates/page-header";
 import { ChartPlaceholder } from "@/components/rates/chart-placeholder";
+import { BondSearch } from "@/components/rates/bond-search";
 import { FAQSection } from "@/components/rates/faq-section";
 import { RelatedCategories } from "@/components/rates/related-categories";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { getPrizeBondDraws, getRecentPrizeBondResults } from "@/lib/data/prize-bonds";
 import { prizeBondFAQs } from "@/lib/faq-content";
+import type { PrizeBondWinnerTier } from "@/types";
+
+const TIER_LABELS: Record<number, string> = {
+  1: "1st Prize",
+  2: "2nd Prize",
+  3: "3rd Prize",
+  4: "4th Prize",
+};
+
+/** Winning numbers grouped by tier. Large tiers (3rd prize can
+ * have 1,000+ numbers) are capped so a card stays readable. */
+function WinnersList({ winners }: { winners: PrizeBondWinnerTier[] }) {
+  return (
+    <div className="mt-3 space-y-2">
+      {winners.map((tier) => (
+        <div key={tier.tier}>
+          <p className="text-xs font-medium text-ink-700 dark:text-ink-200">
+            {TIER_LABELS[tier.tier] ?? `Prize ${tier.tier}`}
+            {tier.prizeAmount && <span className="text-pulse-600 dark:text-pulse-400"> — {tier.prizeAmount}</span>}
+          </p>
+          <p className="font-rate text-xs text-ink-500 dark:text-ink-400 break-all">
+            {tier.bondNumbers.slice(0, 50).join(", ")}
+            {tier.bondNumbers.length > 50 && ` …and ${tier.bondNumbers.length - 50} more`}
+          </p>
+        </div>
+      ))}
+    </div>
+  );
+}
 
 export const metadata: Metadata = {
   title: "Prize Bond Results & Draw Calendar Pakistan | PKRates",
@@ -49,15 +79,7 @@ export default async function PrizeBondsPage() {
 
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-10 sm:py-14 space-y-12">
         <section>
-          <div className="relative max-w-md">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-ink-400" />
-            <input
-              type="text"
-              placeholder="Search your bond number, e.g. 0512345"
-              className="h-12 w-full rounded-full border border-ink-200 dark:border-ink-700 bg-[var(--surface)] pl-11 pr-4 text-sm placeholder:text-ink-400 focus:outline-none focus:ring-2 focus:ring-pulse-500/60"
-            />
-          </div>
-          <p className="mt-2 text-xs text-ink-400">Search checks published results across all denominations and draw dates.</p>
+          <BondSearch />
         </section>
 
         <section>
@@ -86,6 +108,7 @@ export default async function PrizeBondsPage() {
                   {draw.firstPrize && (
                     <p className="mt-1 text-xs text-pulse-600 dark:text-pulse-400 font-medium">1st Prize: {draw.firstPrize}</p>
                   )}
+                  {draw.winners && draw.winners.length > 0 && <WinnersList winners={draw.winners} />}
                 </div>
               </Card>
             ))}
@@ -104,12 +127,15 @@ export default async function PrizeBondsPage() {
             ) : (
             <Card className="divide-y divide-ink-200 dark:divide-ink-800">
               {recentResults.map((d) => (
-                <div key={`${d.denomination}-${d.drawNumber}`} className="flex items-center justify-between px-5 py-3.5">
-                  <div>
-                    <p className="text-sm font-medium text-ink-900 dark:text-ink-100">{d.denomination} &middot; Draw #{d.drawNumber}</p>
-                    <p className="text-xs text-ink-400">{d.city} &middot; {d.date}</p>
+                <div key={`${d.denomination}-${d.drawNumber}`} className="px-5 py-3.5">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-ink-900 dark:text-ink-100">{d.denomination} &middot; Draw #{d.drawNumber}</p>
+                      <p className="text-xs text-ink-400">{d.city} &middot; {d.date}</p>
+                    </div>
+                    <p className="font-rate text-xs font-medium text-pulse-600 dark:text-pulse-400">{d.firstPrize}</p>
                   </div>
-                  <p className="font-rate text-xs font-medium text-pulse-600 dark:text-pulse-400">{d.firstPrize}</p>
+                  {d.winners && d.winners.length > 0 && <WinnersList winners={d.winners} />}
                 </div>
               ))}
             </Card>

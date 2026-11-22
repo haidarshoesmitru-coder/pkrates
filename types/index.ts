@@ -89,6 +89,12 @@ export interface CryptoRate {
   effectiveAt: string;
 }
 
+export interface PrizeBondWinnerTier {
+  tier: number;
+  prizeAmount?: string;
+  bondNumbers: string[];
+}
+
 export interface PrizeBondDraw {
   denomination: string;
   drawNumber: number;
@@ -96,6 +102,17 @@ export interface PrizeBondDraw {
   date: string;
   status: "upcoming" | "completed";
   firstPrize?: string;
+  winners?: PrizeBondWinnerTier[];
+}
+
+export interface BondSearchResult {
+  bondNumber: string;
+  denomination: string;
+  drawNumber: number;
+  city: string;
+  date: string;
+  tier: number;
+  prizeAmount?: string;
 }
 
 export interface Mover {
