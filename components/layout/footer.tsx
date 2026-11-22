@@ -98,12 +98,21 @@ export function Footer() {
             </Link>
             .
           </p>
-          <div className="flex gap-5 text-xs text-ink-400 dark:text-ink-500">
+          <div className="flex flex-wrap gap-x-5 gap-y-2 text-xs text-ink-400 dark:text-ink-500">
+            <Link href="/about" className="hover:text-ink-700 dark:hover:text-ink-200">
+              About
+            </Link>
+            <Link href="/contact" className="hover:text-ink-700 dark:hover:text-ink-200">
+              Contact
+            </Link>
             <Link href="/privacy" className="hover:text-ink-700 dark:hover:text-ink-200">
               Privacy
             </Link>
             <Link href="/terms" className="hover:text-ink-700 dark:hover:text-ink-200">
               Terms
+            </Link>
+            <Link href="/license" className="hover:text-ink-700 dark:hover:text-ink-200">
+              License
             </Link>
           </div>
         </div>

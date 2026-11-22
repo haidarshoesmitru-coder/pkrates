@@ -23,7 +23,14 @@ export default function TermsPage() {
         <p>
           PKRates makes reasonable efforts to keep rates accurate and up to date, but does not
           guarantee their completeness or accuracy at any given moment, and is not liable for any
-          decision made based on rates shown on this site.
+          decision made based on rates shown on this site. Market rates can change at any time,
+          and the rate you are quoted by your bank, dealer or exchange provider at the time of
+          your transaction is the one that applies.
+        </p>
+        <p>
+          We may update, change or remove content on this site — including these terms — at any
+          time without notice. Continued use of the site after a change means you accept the
+          updated terms.
         </p>
         <p>
           Content on this site may not be reproduced or redistributed without permission, except

@@ -13,11 +13,35 @@ export default function ContactPage() {
         Spotted a rate that looks off, have a correction, or a suggestion for PKRates? We&rsquo;d
         like to hear from you.
       </p>
-      <div className="mt-8 rounded-xl border border-ink-200 dark:border-ink-800 bg-[var(--surface)] p-6">
-        <p className="text-sm text-ink-500 dark:text-ink-400">Email</p>
-        <a href="mailto:hello@pkrates.pk" className="mt-1 block text-lg font-medium text-pulse-600 dark:text-pulse-400">
-          hello@pkrates.pk
-        </a>
+      <div className="mt-8 space-y-4">
+        <div className="rounded-xl border border-ink-200 dark:border-ink-800 bg-[var(--surface)] p-6">
+          <p className="text-sm text-ink-500 dark:text-ink-400">Email</p>
+          <a href="mailto:hello@pkrates.pk" className="mt-1 block text-lg font-medium text-pulse-600 dark:text-pulse-400">
+            hello@pkrates.pk
+          </a>
+        </div>
+        <div className="rounded-xl border border-ink-200 dark:border-ink-800 bg-[var(--surface)] p-6">
+          <p className="text-sm text-ink-500 dark:text-ink-400">X (Twitter)</p>
+          <a
+            href="https://x.com/PkRates1"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="mt-1 block text-lg font-medium text-pulse-600 dark:text-pulse-400"
+          >
+            @PkRates1
+          </a>
+        </div>
+        <div className="rounded-xl border border-ink-200 dark:border-ink-800 bg-[var(--surface)] p-6">
+          <p className="text-sm text-ink-500 dark:text-ink-400">Instagram</p>
+          <a
+            href="https://instagram.com/pkrates1"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="mt-1 block text-lg font-medium text-pulse-600 dark:text-pulse-400"
+          >
+            @pkrates1
+          </a>
+        </div>
       </div>
     </div>
   );

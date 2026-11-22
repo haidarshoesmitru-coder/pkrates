@@ -22,8 +22,21 @@ export default function AboutPage() {
           we say so rather than showing a fabricated figure.
         </p>
         <p>
-          PKRates is independently run and is not affiliated with the State Bank of Pakistan,
-          OGRA, National Savings, or any bank or association it cites as a source.
+          Our rates come from named sources: the State Bank of Pakistan (interbank closing
+          rates), the National Bank of Pakistan (TT buying/selling rates), the All Pakistan
+          Sarafa Gems &amp; Jewellers Association and city Sarafa Association boards (gold &amp;
+          silver), OGRA (petrol, diesel and LPG prices), National Savings Pakistan (prize bond
+          draws and results), and Kamran Steel (steel rates). See our{" "}
+          <a href="/sources" className="text-pulse-600 dark:text-pulse-400 underline">
+            Sources &amp; Methodology
+          </a>{" "}
+          page for the full list.
+        </p>
+        <p>
+          PKRates is an independent website. It is not the official website of the State Bank of
+          Pakistan, the National Bank of Pakistan, OGRA, National Savings, Kamran Steel, or any
+          other bank, institution or association it cites as a source, and it is not affiliated
+          with or endorsed by any of them.
         </p>
       </div>
       <p className="mt-10 text-xs text-ink-400 dark:text-ink-500">
