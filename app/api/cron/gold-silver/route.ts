@@ -27,8 +27,16 @@ async function fetchSarafa<T>(metal: "gold" | "silver", slugs: string[]): Promis
 }
 
 export async function GET(request: Request) {
+  // Fail closed (audit Important #2): if CRON_SECRET is not set in
+  // the environment, refuse to run instead of comparing against
+  // the guessable literal "Bearer undefined".
+  const cronSecret = process.env.CRON_SECRET;
+  if (!cronSecret) {
+    console.error("[cron gold-silver] CRON_SECRET is not set — refusing to run.");
+    return NextResponse.json({ error: "Server misconfiguration" }, { status: 500 });
+  }
   const authHeader = request.headers.get("authorization");
-  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+  if (authHeader !== `Bearer ${cronSecret}`) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -38,19 +46,28 @@ export async function GET(request: Request) {
     .from("cities")
     .select("id, slug")
     .returns<{ id: number; slug: string }[]>();
-  if (citiesError) return NextResponse.json({ error: citiesError.message }, { status: 500 });
+  if (citiesError) {
+    console.error("[cron gold-silver] cities query failed:", citiesError);
+    return NextResponse.json({ error: "Internal error" }, { status: 500 });
+  }
 
   const { data: karats, error: karatsError } = await supabase
     .from("gold_karats")
     .select("id, purity_fraction")
     .returns<{ id: number; purity_fraction: number }[]>();
-  if (karatsError) return NextResponse.json({ error: karatsError.message }, { status: 500 });
+  if (karatsError) {
+    console.error("[cron gold-silver] karats query failed:", karatsError);
+    return NextResponse.json({ error: "Internal error" }, { status: 500 });
+  }
 
   const { data: purities, error: puritiesError } = await supabase
     .from("silver_purities")
     .select("id, purity_fraction")
     .returns<{ id: number; purity_fraction: number }[]>();
-  if (puritiesError) return NextResponse.json({ error: puritiesError.message }, { status: 500 });
+  if (puritiesError) {
+    console.error("[cron gold-silver] purities query failed:", puritiesError);
+    return NextResponse.json({ error: "Internal error" }, { status: 500 });
+  }
 
   const { data: source, error: sourceError } = await supabase
     .from("sources")
@@ -59,10 +76,8 @@ export async function GET(request: Request) {
     .maybeSingle()
     .returns<{ id: string }>();
   if (sourceError || !source) {
-    return NextResponse.json(
-      { error: sourceError?.message ?? "'Sarafa.pk (Aggregator API)' source not found — run the setup SQL first." },
-      { status: 500 }
-    );
+    console.error("[cron gold-silver] source lookup failed:", sourceError ?? "source row not found");
+    return NextResponse.json({ error: "Internal error" }, { status: 500 });
   }
 
   const slugs = cities.map((c) => c.slug);
@@ -71,19 +86,20 @@ export async function GET(request: Request) {
     fetchSarafa<SarafaSilverRow>("silver", slugs),
   ]);
 
-  // Guard: never overwrite a rate published today (PKT) from another
-  // source (e.g. a manually approved Sarafa Association board). The
-  // feed only fills gaps and skips values identical to today's latest.
-  const pktNow = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Karachi" }));
-  const pktStart = new Date(
-    Date.UTC(pktNow.getFullYear(), pktNow.getMonth(), pktNow.getDate()) - 5 * 60 * 60 * 1000
-  ).toISOString();
+  // Guard: never overwrite a rate published from another source
+  // (e.g. a manually approved Sarafa Association board) within the
+  // last 36 hours. A same-day (PKT) window was not enough — a rate
+  // published late at night was unprotected against the next
+  // morning's feed run (audit Minor #6). The feed only fills gaps
+  // and skips values identical to the latest rate in the window.
+  const GUARD_WINDOW_MS = 36 * 60 * 60 * 1000;
+  const guardStart = new Date(Date.now() - GUARD_WINDOW_MS).toISOString();
 
   const { data: todayGold } = await supabase
     .from("gold_rates")
     .select("city_id, karat_id, rate_per_tola, source_id")
     .eq("status", "published")
-    .gte("effective_at", pktStart)
+    .gte("effective_at", guardStart)
     .order("effective_at", { ascending: false })
     .limit(1000)
     .returns<{ city_id: number; karat_id: number; rate_per_tola: number; source_id: string }[]>();
@@ -99,7 +115,7 @@ export async function GET(request: Request) {
     .from("silver_rates")
     .select("city_id, purity_id, rate_per_tola, source_id")
     .eq("status", "published")
-    .gte("effective_at", pktStart)
+    .gte("effective_at", guardStart)
     .order("effective_at", { ascending: false })
     .limit(1000)
     .returns<{ city_id: number; purity_id: number; rate_per_tola: number; source_id: string }[]>();
@@ -171,12 +187,18 @@ export async function GET(request: Request) {
 
   if (goldInserts.length > 0) {
     const { error: goldInsertError } = await supabase.from("gold_rates").insert(goldInserts as never[]);
-    if (goldInsertError) return NextResponse.json({ error: goldInsertError.message }, { status: 500 });
+    if (goldInsertError) {
+      console.error("[cron gold-silver] gold insert failed:", goldInsertError);
+      return NextResponse.json({ error: "Internal error" }, { status: 500 });
+    }
   }
 
   if (silverInserts.length > 0) {
     const { error: silverInsertError } = await supabase.from("silver_rates").insert(silverInserts as never[]);
-    if (silverInsertError) return NextResponse.json({ error: silverInsertError.message }, { status: 500 });
+    if (silverInsertError) {
+      console.error("[cron gold-silver] silver insert failed:", silverInsertError);
+      return NextResponse.json({ error: "Internal error" }, { status: 500 });
+    }
   }
 
   await supabase.rpc("refresh_current_rate_view", { view_name: "current_gold_rates" } as never);

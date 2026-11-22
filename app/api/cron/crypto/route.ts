@@ -23,8 +23,16 @@ const COINGECKO_ID_BY_SYMBOL: Record<string, string> = {
 };
 
 export async function GET(request: Request) {
+  // Fail closed (audit Important #2): if CRON_SECRET is not set in
+  // the environment, refuse to run instead of comparing against
+  // the guessable literal "Bearer undefined".
+  const cronSecret = process.env.CRON_SECRET;
+  if (!cronSecret) {
+    console.error("[cron crypto] CRON_SECRET is not set — refusing to run.");
+    return NextResponse.json({ error: "Server misconfiguration" }, { status: 500 });
+  }
   const authHeader = request.headers.get("authorization");
-  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+  if (authHeader !== `Bearer ${cronSecret}`) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -35,7 +43,8 @@ export async function GET(request: Request) {
     .select("id, symbol")
     .returns<{ id: number; symbol: string }[]>();
   if (coinsError) {
-    return NextResponse.json({ error: coinsError.message }, { status: 500 });
+    console.error("[cron crypto] coins query failed:", coinsError);
+    return NextResponse.json({ error: "Internal error" }, { status: 500 });
   }
 
   const { data: source, error: sourceError } = await supabase
@@ -45,10 +54,8 @@ export async function GET(request: Request) {
     .maybeSingle()
     .returns<{ id: string }>();
   if (sourceError || !source) {
-    return NextResponse.json(
-      { error: sourceError?.message ?? "CoinGecko API source not found in `sources` table" },
-      { status: 500 }
-    );
+    console.error("[cron crypto] source lookup failed:", sourceError ?? "source row not found");
+    return NextResponse.json({ error: "Internal error" }, { status: 500 });
   }
 
   const ids = coins.map((c) => COINGECKO_ID_BY_SYMBOL[c.symbol]).filter(Boolean).join(",");
@@ -82,7 +89,8 @@ export async function GET(request: Request) {
 
   const { error: insertError } = await supabase.from("crypto_rates").insert(rows as unknown as never[]);
   if (insertError) {
-    return NextResponse.json({ error: insertError.message }, { status: 500 });
+    console.error("[cron crypto] insert failed:", insertError);
+    return NextResponse.json({ error: "Internal error" }, { status: 500 });
   }
 
   return NextResponse.json({ inserted: rows.length, at: new Date().toISOString() });

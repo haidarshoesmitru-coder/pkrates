@@ -8,25 +8,19 @@ import type { Database } from "@/types/database";
  * `*_submissions` table — see 20260719091100_rls_policies.sql and
  * 20260719091700_silver_workflow_integration.sql) is gated on
  * `auth.uid()` via `current_app_user_id()` / `can_edit()` /
- * `can_review()`. This project has no Supabase Auth wired up yet —
- * every prior production-readiness review in this repo (see
- * PKRates_Production_Readiness_Audit.md, section 7) flagged this as
- * a known, separate, larger piece of work, not something to bolt on
- * silently inside a data-layer migration task.
+ * `can_review()`. Supabase Auth IS wired up (middleware.ts gates
+ * /admin, app/(admin)/admin/login signs in with email/password).
  *
- * Given that gap, admin WRITE actions (submit a rate, approve,
- * reject) in this release go through the service-role key, which
- * bypasses RLS entirely, server-side only, via Next.js Server
- * Actions (see lib/data/admin.ts). Every mutation still records
- * `submitted_by` / `reviewed_by` — using the seeded "system admin"
- * user's real row in the `users` table (see getSystemAdminUser() in
- * lib/data/admin.ts) rather than a fabricated id — but it cannot yet
- * attribute an action to whichever real person is sitting at the
- * keyboard, because there is no session to ask. That single
- * limitation goes away automatically the moment Supabase Auth is
- * added: swap this client for the RLS-respecting server client
- * (lib/supabase/server.ts) inside lib/data/admin.ts's mutation
- * functions, and every policy already written is ready for it.
+ * Admin WRITE actions (submit a rate, approve, reject) still go
+ * through the service-role key, which bypasses RLS entirely,
+ * server-side only, via Next.js Server Actions (see
+ * lib/data/admin.ts). Because this client bypasses RLS, the
+ * authorization boundary for writes is requireAdminUser() in
+ * lib/data/admin.ts: it resolves the logged-in Auth user to their
+ * `users` row, checks the role server-side, and every mutation
+ * records `submitted_by` / `reviewed_by` as that real user. Do not
+ * add a new write path through this client without going through
+ * requireAdminUser() (or, for cron routes, the CRON_SECRET check).
  *
  * This key must never reach the browser — this file is imported
  * exclusively by Server Actions / Route Handlers, never by a

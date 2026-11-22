@@ -42,7 +42,9 @@ export function FAQSection({ title, items }: { title: string; items: FAQItem[] }
         })}
       </div>
 
-      {/* SEO: FAQPage structured data mirrors the visible Q&A above */}
+      {/* SEO: FAQPage structured data mirrors the visible Q&A above.
+          `<` is escaped as < so FAQ text can never break out
+          of the script tag (audit Minor #5). */}
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{
@@ -54,7 +56,7 @@ export function FAQSection({ title, items }: { title: string; items: FAQItem[] }
               name: item.question,
               acceptedAnswer: { "@type": "Answer", text: item.answer },
             })),
-          }),
+          }).replace(/</g, "\\u003c"),
         }}
       />
     </section>

@@ -6,9 +6,12 @@ import type { SourceRow, AuditLogRow } from "@/types/database";
 
 /**
  * Every write in this file goes through the service-role client —
- * see lib/supabase/admin.ts's header comment for exactly why (no
- * Supabase Auth session exists yet to satisfy the RLS write
- * policies). Reads use the ordinary RLS-respecting server client.
+ * see lib/supabase/admin.ts's header comment for exactly why.
+ * Supabase Auth IS wired up (middleware + /admin/login), and every
+ * write below first calls requireAdminUser(), which verifies the
+ * logged-in user's `users` row and role server-side and attributes
+ * the write to that user (submitted_by / reviewed_by). Reads use
+ * the ordinary RLS-respecting server client.
  */
 
 interface SystemAdminUser {
@@ -40,6 +43,102 @@ async function getSystemAdminUser(): Promise<SystemAdminUser> {
   return data as SystemAdminUser;
 }
 export { getSystemAdminUser };
+
+// ---------------------------------------------------------------
+// Server-side authorization for writes (security audit 22 Nov 2026,
+// Important #1 + #3). Middleware only proves *some* user is logged
+// in; Server Actions can also be invoked directly, so every write
+// verifies the session user's `users` row and role here, and the
+// write is attributed to that user — never to the seeded system
+// admin. getSystemAdminUser() above remains for display purposes
+// in admin pages (topbar name) only.
+// ---------------------------------------------------------------
+export interface CurrentAdminUser {
+  id: string;
+  full_name: string;
+  email: string;
+  role: string;
+}
+
+/** Roles allowed to submit rates / edit posts (lib/domain-config.ts). */
+export const ADMIN_WRITE_ROLES = ["super_admin", "admin", "reviewer", "editor"] as const;
+/** Roles allowed to approve/reject submissions. */
+export const ADMIN_REVIEW_ROLES = ["super_admin", "admin", "reviewer"] as const;
+/** Roles allowed to manage sources. */
+export const ADMIN_MANAGE_ROLES = ["super_admin", "admin"] as const;
+/** Roles allowed to change user roles. */
+export const ADMIN_SUPER_ROLES = ["super_admin"] as const;
+
+interface AdminUserRow {
+  id: string;
+  full_name: string;
+  email: string;
+  is_active: boolean;
+  role_id: number;
+}
+
+/**
+ * Resolves the logged-in Supabase Auth user to their `users` row
+ * and checks the role. Throws (fail-closed) when there is no
+ * session, no matching active `users` row, or the role is not in
+ * `allowedRoles`. The identity comes from auth.getUser() on the
+ * cookie session client (JWT validated by Supabase Auth); the row
+ * lookup uses the service-role client so RLS on `users` can never
+ * silently hide the caller's own row. Lookup is by auth_user_id
+ * first, with an email fallback for the seeded founding-admin row.
+ */
+export async function requireAdminUser(
+  allowedRoles: readonly string[] = ADMIN_WRITE_ROLES
+): Promise<CurrentAdminUser> {
+  const serverClient = await createSupabaseServerClient();
+  const {
+    data: { user },
+    error: authError,
+  } = await serverClient.auth.getUser();
+  if (authError || !user) {
+    throw new Error("Unauthorized: admin sign-in required.");
+  }
+
+  const adminClient = createSupabaseAdminClient();
+  const selectUser = () =>
+    adminClient.from("users").select("id, full_name, email, is_active, role_id");
+
+  let { data: row } = await selectUser()
+    .eq("auth_user_id", user.id)
+    .maybeSingle()
+    .returns<AdminUserRow>();
+  if (!row && user.email) {
+    ({ data: row } = await selectUser()
+      .eq("email", user.email)
+      .maybeSingle()
+      .returns<AdminUserRow>());
+  }
+  if (!row && user.email && user.email !== user.email.toLowerCase()) {
+    ({ data: row } = await selectUser()
+      .eq("email", user.email.toLowerCase())
+      .maybeSingle()
+      .returns<AdminUserRow>());
+  }
+  if (!row) {
+    throw new Error("Unauthorized: no admin user record for this account.");
+  }
+  if (!row.is_active) {
+    throw new Error("Unauthorized: this admin account is inactive.");
+  }
+
+  const { data: roleRow } = await adminClient
+    .from("roles")
+    .select("name")
+    .eq("id", row.role_id)
+    .maybeSingle()
+    .returns<{ name: string }>();
+  const role = roleRow?.name ?? "";
+  if (!allowedRoles.includes(role)) {
+    throw new Error(`Unauthorized: role "${role || "unknown"}" cannot perform this action.`);
+  }
+
+  return { id: row.id, full_name: row.full_name, email: row.email, role };
+}
 
 // ---------------------------------------------------------------
 // Per-domain adapters — the one place that knows each domain's
@@ -363,7 +462,7 @@ export async function getPendingSubmissions(domain: string): Promise<Submission[
 // header comment)
 // ---------------------------------------------------------------
 export async function submitRate(domain: string, values: Record<string, string>, sourceId: string) {
-  const [refs, systemAdmin] = await Promise.all([loadRefs(), getSystemAdminUser()]);
+  const [refs, actor] = await Promise.all([loadRefs(), requireAdminUser(ADMIN_WRITE_ROLES)]);
   const supabase = createSupabaseAdminClient();
 
   if (domain === "prize-bonds") {
@@ -382,7 +481,7 @@ export async function submitRate(domain: string, values: Record<string, string>,
       draw_date: values.drawDate,
       draw_status: drawStatusDbValue(values.drawStatus ?? "Scheduled"),
       source_id: sourceId,
-      submitted_by: systemAdmin.id,
+      submitted_by: actor.id,
     };
     const { error } = await asMutationClient(supabase).from(PRIZE_BOND_ADAPTER.submissionTable).insert(payload);
     if (error) throw new Error(`Submit failed (prize-bonds): ${error.message}`);
@@ -391,7 +490,7 @@ export async function submitRate(domain: string, values: Record<string, string>,
 
   const adapter = ADAPTERS[domain];
   if (!adapter) throw new Error(`Unknown domain: ${domain}`);
-  const payload = adapter.buildInsert(values, refs, sourceId, systemAdmin.id);
+  const payload = adapter.buildInsert(values, refs, sourceId, actor.id);
   const { error } = await asMutationClient(supabase).from(adapter.submissionTable).insert(payload);
   if (error) throw new Error(`Submit failed (${domain}): ${error.message}`);
 }
@@ -399,24 +498,24 @@ export async function submitRate(domain: string, values: Record<string, string>,
 export async function approveSubmission(domain: string, submissionId: string) {
   const table = domain === "prize-bonds" ? PRIZE_BOND_ADAPTER.submissionTable : ADAPTERS[domain]?.submissionTable;
   if (!table) throw new Error(`Unknown domain: ${domain}`);
-  const systemAdmin = await getSystemAdminUser();
+  const actor = await requireAdminUser(ADMIN_REVIEW_ROLES);
   const supabase = createSupabaseAdminClient();
   // Triggers the corresponding promote_*_submission() DB trigger,
   // which inserts the published fact row and writes the audit log
   // entry atomically — see supabase/migrations/20260719091000 and
   // 20260719091700.
-  const { error } = await asMutationClient(supabase).from(table).update({ status: "approved", reviewed_by: systemAdmin.id }).eq("id", submissionId);
+  const { error } = await asMutationClient(supabase).from(table).update({ status: "approved", reviewed_by: actor.id }).eq("id", submissionId);
   if (error) throw new Error(`Approve failed (${domain}): ${error.message}`);
 }
 
 export async function rejectSubmission(domain: string, submissionId: string, notes: string) {
   const table = domain === "prize-bonds" ? PRIZE_BOND_ADAPTER.submissionTable : ADAPTERS[domain]?.submissionTable;
   if (!table) throw new Error(`Unknown domain: ${domain}`);
-  const systemAdmin = await getSystemAdminUser();
+  const actor = await requireAdminUser(ADMIN_REVIEW_ROLES);
   const supabase = createSupabaseAdminClient();
   const { error } = await asMutationClient(supabase)
     .from(table)
-    .update({ status: "rejected", reviewed_by: systemAdmin.id, reviewer_notes: notes || "Rejected via admin panel" })
+    .update({ status: "rejected", reviewed_by: actor.id, reviewer_notes: notes || "Rejected via admin panel" })
     .eq("id", submissionId);
   if (error) throw new Error(`Reject failed (${domain}): ${error.message}`);
 }
@@ -458,7 +557,7 @@ export async function submitPrizeBondWinners(
   bondNumbers: string[],
   sourceId: string
 ) {
-  const systemAdmin = await getSystemAdminUser();
+  const actor = await requireAdminUser(ADMIN_WRITE_ROLES);
   const supabase = createSupabaseAdminClient();
   const winnersPayload = bondNumbers.map((bondNumber) => ({
     prize_tier: prizeTier,
@@ -469,7 +568,7 @@ export async function submitPrizeBondWinners(
     draw_id: drawId,
     source_id: sourceId,
     winners_payload: winnersPayload as unknown as Record<string, unknown>,
-    submitted_by: systemAdmin.id,
+    submitted_by: actor.id,
   });
   if (error) throw new Error(`Winners submit failed: ${error.message}`);
 }
@@ -510,21 +609,21 @@ export async function getPendingWinnerSubmissions(): Promise<PendingWinnerSubmis
 }
 
 export async function approveWinnerSubmission(submissionId: string) {
-  const systemAdmin = await getSystemAdminUser();
+  const actor = await requireAdminUser(ADMIN_REVIEW_ROLES);
   const supabase = createSupabaseAdminClient();
   const { error } = await asMutationClient(supabase)
     .from("prize_bond_winner_submissions")
-    .update({ status: "approved", reviewed_by: systemAdmin.id })
+    .update({ status: "approved", reviewed_by: actor.id })
     .eq("id", submissionId);
   if (error) throw new Error(`Winners approve failed: ${error.message}`);
 }
 
 export async function rejectWinnerSubmission(submissionId: string, notes: string) {
-  const systemAdmin = await getSystemAdminUser();
+  const actor = await requireAdminUser(ADMIN_REVIEW_ROLES);
   const supabase = createSupabaseAdminClient();
   const { error } = await asMutationClient(supabase)
     .from("prize_bond_winner_submissions")
-    .update({ status: "rejected", reviewed_by: systemAdmin.id, reviewer_notes: notes || "Rejected via admin panel" })
+    .update({ status: "rejected", reviewed_by: actor.id, reviewer_notes: notes || "Rejected via admin panel" })
     .eq("id", submissionId);
   if (error) throw new Error(`Winners reject failed: ${error.message}`);
 }
@@ -542,6 +641,7 @@ export async function getAllSources(): Promise<SourceRow[]> {
 }
 
 export async function toggleSourceAutoPublish(sourceId: string, allow: boolean) {
+  await requireAdminUser(ADMIN_MANAGE_ROLES);
   const supabase = createSupabaseAdminClient();
   const { error } = await asMutationClient(supabase)
     .from("sources")
@@ -612,6 +712,7 @@ export async function getAllUsers(): Promise<AdminUserSummary[]> {
 }
 
 export async function updateUserRole(userId: string, roleName: string) {
+  await requireAdminUser(ADMIN_SUPER_ROLES);
   const supabase = createSupabaseAdminClient();
   const { data: roleData, error: roleErr } = await supabase.from("roles").select("id").eq("name", roleName).maybeSingle();
   if (roleErr) throw roleErr;

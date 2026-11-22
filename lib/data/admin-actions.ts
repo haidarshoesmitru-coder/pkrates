@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { submitRate, approveSubmission, rejectSubmission, toggleSourceAutoPublish, updateUserRole, submitPrizeBondWinners, approveWinnerSubmission, rejectWinnerSubmission } from "@/lib/data/admin";
+import { submitRate, approveSubmission, rejectSubmission, toggleSourceAutoPublish, updateUserRole, submitPrizeBondWinners, approveWinnerSubmission, rejectWinnerSubmission, requireAdminUser, ADMIN_WRITE_ROLES } from "@/lib/data/admin";
 import { savePost, deletePost, type PostInput } from "@/lib/data/posts";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
@@ -100,6 +100,10 @@ export async function updateUserRoleAction(userId: string, roleName: string) {
 
 export async function savePostAction(input: PostInput): Promise<{ error?: string }> {
   try {
+    // Server-side role check (audit Important #1): the rate/source/
+    // user actions above are guarded inside lib/data/admin.ts;
+    // posts write through lib/data/posts.ts, so verify here.
+    await requireAdminUser(ADMIN_WRITE_ROLES);
     await savePost(input);
   } catch (err) {
     return { error: err instanceof Error ? err.message : "Save failed." };
@@ -113,6 +117,7 @@ export async function savePostAction(input: PostInput): Promise<{ error?: string
 
 export async function deletePostAction(id: string): Promise<{ error?: string }> {
   try {
+    await requireAdminUser(ADMIN_WRITE_ROLES);
     await deletePost(id);
   } catch (err) {
     return { error: err instanceof Error ? err.message : "Delete failed." };

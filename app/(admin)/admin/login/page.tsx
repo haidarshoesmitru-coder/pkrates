@@ -27,7 +27,12 @@ export default function AdminLoginPage() {
       return;
     }
 
-    const next = searchParams.get("next") ?? "/admin";
+    // Open-redirect guard (audit Minor #1): only ever navigate to
+    // an in-admin path after login — never to an external or
+    // protocol-relative URL supplied via the `next` parameter.
+    const rawNext = searchParams.get("next");
+    const next =
+      rawNext && rawNext.startsWith("/admin") && !rawNext.startsWith("//") ? rawNext : "/admin";
     router.push(next);
     router.refresh();
   }
