@@ -1,6 +1,6 @@
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
-import { getCities, getGoldKarats, getSilverPurities, getCurrencies, getFuelTypes, getCementBrands, getSteelGrades, getActiveSources } from "@/lib/data/reference";
+import { getCities, getGoldKarats, getSilverPurities, getCurrencies, getFuelTypes, getCementBrands, getSteelGrades, getPrizeBondDenominations, getActiveSources } from "@/lib/data/reference";
 import type { FieldValue, PublishedRecord, Submission } from "@/types/admin";
 import type { SourceRow, AuditLogRow } from "@/types/database";
 
@@ -245,6 +245,18 @@ const PRIZE_BOND_ADAPTER: { factTable: "prize_bond_draws"; submissionTable: "pri
   submissionTable: "prize_bond_draw_submissions",
 };
 
+/** DB draw_status values are lowercase ('scheduled' | 'completed' |
+ * 'postponed' | 'cancelled'); the admin form uses capitalized labels. */
+const DRAW_STATUS_LABELS: Record<string, string> = {
+  scheduled: "Scheduled", completed: "Completed", postponed: "Postponed", cancelled: "Cancelled",
+};
+const drawStatusLabel = (dbValue: string) => DRAW_STATUS_LABELS[dbValue] ?? dbValue;
+const drawStatusDbValue = (label: string) => label.trim().toLowerCase();
+
+/** "Rs. 1,500" (form option) -> 1500 (prize_bond_denominations.face_value). */
+const denominationFaceValue = (label: string) => Number(label.replace(/[^0-9]/g, ""));
+const denominationLabel = (faceValue: number) => `Rs. ${faceValue.toLocaleString("en-PK")}`;
+
 function domainNameToRlsDomain(domain: string): string {
   return domain === "prize-bonds" ? "prize_bonds" : domain;
 }
@@ -257,6 +269,7 @@ export async function getPublishedRecords(domain: string): Promise<PublishedReco
   const [refs, sources] = await Promise.all([loadRefs(), getActiveSources()]);
 
   if (domain === "prize-bonds") {
+    const denominations = await getPrizeBondDenominations();
     const { data, error } = await supabase
       .from("prize_bond_draws")
       .select("id, denomination_id, draw_number, city_id, draw_date, status, source_id, approved_by, created_at")
@@ -270,10 +283,11 @@ export async function getPublishedRecords(domain: string): Promise<PublishedReco
     return draws.map((d) => ({
       id: d.id,
       fields: [
-        { key: "denomination", value: String(d.denomination_id) },
+        { key: "denomination", value: denominationLabel(Number(denominations.find((dn) => dn.id === d.denomination_id)?.face_value ?? 0)) },
         { key: "drawNumber", value: String(d.draw_number) },
         { key: "city", value: cityName(refs, d.city_id) },
         { key: "drawDate", value: new Date(d.draw_date).toLocaleDateString("en-GB") },
+        { key: "drawStatus", value: drawStatusLabel(d.status) },
       ],
       status: "published",
       sourceName: d.source_id ? sources.find((s) => s.id === d.source_id)?.name ?? "Unknown" : "—",
@@ -320,13 +334,15 @@ export async function getPendingSubmissions(domain: string): Promise<Submission[
   if (error) throw error;
   const rows = (data ?? []) as Record<string, unknown>[];
 
+  const denominations = domain === "prize-bonds" ? await getPrizeBondDenominations() : [];
   const toFields =
     domain === "prize-bonds"
       ? (r: Record<string, unknown>) => [
-          { key: "denomination", value: String(r.denomination_id) },
+          { key: "denomination", value: denominationLabel(Number(denominations.find((dn) => dn.id === r.denomination_id)?.face_value ?? 0)) },
           { key: "drawNumber", value: String(r.draw_number) },
           { key: "city", value: cityName(refs, r.city_id as number) },
           { key: "drawDate", value: new Date(r.draw_date as string).toLocaleDateString("en-GB") },
+          { key: "drawStatus", value: drawStatusLabel((r.draw_status as string) ?? "scheduled") },
         ]
       : (r: Record<string, unknown>) => ADAPTERS[domain].toSubmissionFields(r, refs);
 
@@ -347,10 +363,34 @@ export async function getPendingSubmissions(domain: string): Promise<Submission[
 // header comment)
 // ---------------------------------------------------------------
 export async function submitRate(domain: string, values: Record<string, string>, sourceId: string) {
-  const adapter = ADAPTERS[domain];
-  if (!adapter) throw new Error(`Unknown domain: ${domain}`);
   const [refs, systemAdmin] = await Promise.all([loadRefs(), getSystemAdminUser()]);
   const supabase = createSupabaseAdminClient();
+
+  if (domain === "prize-bonds") {
+    // Draw submissions live in their own table (no ADAPTERS entry).
+    // Approving one fires promote_prize_bond_draw_submission(),
+    // which copies draw_status into prize_bond_draws.status.
+    const denominations = await getPrizeBondDenominations();
+    const denominationId = denominations.find(
+      (dn) => Number(dn.face_value) === denominationFaceValue(values.denomination ?? "")
+    )?.id;
+    if (!denominationId) throw new Error(`Submit failed (prize-bonds): unknown denomination "${values.denomination}"`);
+    const payload = {
+      denomination_id: denominationId,
+      draw_number: Number(values.drawNumber),
+      city_id: cityId(refs, values.city),
+      draw_date: values.drawDate,
+      draw_status: drawStatusDbValue(values.drawStatus ?? "Scheduled"),
+      source_id: sourceId,
+      submitted_by: systemAdmin.id,
+    };
+    const { error } = await asMutationClient(supabase).from(PRIZE_BOND_ADAPTER.submissionTable).insert(payload);
+    if (error) throw new Error(`Submit failed (prize-bonds): ${error.message}`);
+    return;
+  }
+
+  const adapter = ADAPTERS[domain];
+  if (!adapter) throw new Error(`Unknown domain: ${domain}`);
   const payload = adapter.buildInsert(values, refs, sourceId, systemAdmin.id);
   const { error } = await asMutationClient(supabase).from(adapter.submissionTable).insert(payload);
   if (error) throw new Error(`Submit failed (${domain}): ${error.message}`);
@@ -379,6 +419,114 @@ export async function rejectSubmission(domain: string, submissionId: string, not
     .update({ status: "rejected", reviewed_by: systemAdmin.id, reviewer_notes: notes || "Rejected via admin panel" })
     .eq("id", submissionId);
   if (error) throw new Error(`Reject failed (${domain}): ${error.message}`);
+}
+
+// ---------------------------------------------------------------
+// Prize Bond winners — the second prize-bond flow. Winners are
+// entered per published draw as one JSON batch in
+// prize_bond_winner_submissions; approving fires
+// promote_prize_bond_winner_submission(), which expands the batch
+// into prize_bond_winners rows.
+// ---------------------------------------------------------------
+export interface PrizeBondDrawOption {
+  id: string;
+  label: string;
+}
+
+export async function getPrizeBondDrawOptions(): Promise<PrizeBondDrawOption[]> {
+  const supabase = await createSupabaseServerClient();
+  const [refs, denominations] = await Promise.all([loadRefs(), getPrizeBondDenominations()]);
+  const { data, error } = await supabase
+    .from("prize_bond_draws")
+    .select("id, denomination_id, draw_number, city_id, draw_date, status")
+    .order("draw_date", { ascending: false })
+    .limit(50);
+  if (error) throw error;
+  const draws = (data ?? []) as {
+    id: string; denomination_id: number; draw_number: number; city_id: number; draw_date: string; status: string;
+  }[];
+  return draws.map((d) => ({
+    id: d.id,
+    label: `${denominationLabel(Number(denominations.find((dn) => dn.id === d.denomination_id)?.face_value ?? 0))} · Draw #${d.draw_number} · ${cityName(refs, d.city_id)} · ${new Date(d.draw_date).toLocaleDateString("en-GB")} (${drawStatusLabel(d.status)})`,
+  }));
+}
+
+export async function submitPrizeBondWinners(
+  drawId: string,
+  prizeTier: number,
+  prizeAmount: string,
+  bondNumbers: string[],
+  sourceId: string
+) {
+  const systemAdmin = await getSystemAdminUser();
+  const supabase = createSupabaseAdminClient();
+  const winnersPayload = bondNumbers.map((bondNumber) => ({
+    prize_tier: prizeTier,
+    bond_number: bondNumber,
+    prize_amount: prizeAmount ? Number(prizeAmount) : null,
+  }));
+  const { error } = await asMutationClient(supabase).from("prize_bond_winner_submissions").insert({
+    draw_id: drawId,
+    source_id: sourceId,
+    winners_payload: winnersPayload as unknown as Record<string, unknown>,
+    submitted_by: systemAdmin.id,
+  });
+  if (error) throw new Error(`Winners submit failed: ${error.message}`);
+}
+
+export interface PendingWinnerSubmission {
+  id: string;
+  drawLabel: string;
+  winnersCount: number;
+  bondNumbers: string[];
+  sourceName: string;
+  submittedAt: string;
+  status: Submission["status"];
+}
+
+export async function getPendingWinnerSubmissions(): Promise<PendingWinnerSubmission[]> {
+  const supabase = await createSupabaseServerClient();
+  const [sources, drawOptions] = await Promise.all([getActiveSources(), getPrizeBondDrawOptions()]);
+  const { data, error } = await supabase
+    .from("prize_bond_winner_submissions")
+    .select("id, draw_id, source_id, winners_payload, winners_count, submitted_at, status")
+    .in("status", ["pending", "flagged_anomaly"])
+    .order("submitted_at", { ascending: false });
+  if (error) throw error;
+  const rows = (data ?? []) as {
+    id: string; draw_id: string; source_id: string;
+    winners_payload: { bond_number?: string }[]; winners_count: number | null;
+    submitted_at: string; status: Submission["status"];
+  }[];
+  return rows.map((r) => ({
+    id: r.id,
+    drawLabel: drawOptions.find((d) => d.id === r.draw_id)?.label ?? "Unknown draw",
+    winnersCount: r.winners_count ?? (Array.isArray(r.winners_payload) ? r.winners_payload.length : 0),
+    bondNumbers: Array.isArray(r.winners_payload) ? r.winners_payload.map((w) => w.bond_number ?? "") : [],
+    sourceName: sources.find((s) => s.id === r.source_id)?.name ?? "Unknown",
+    submittedAt: new Date(r.submitted_at).toLocaleString("en-GB"),
+    status: r.status,
+  }));
+}
+
+export async function approveWinnerSubmission(submissionId: string) {
+  const systemAdmin = await getSystemAdminUser();
+  const supabase = createSupabaseAdminClient();
+  const { error } = await asMutationClient(supabase)
+    .from("prize_bond_winner_submissions")
+    .update({ status: "approved", reviewed_by: systemAdmin.id })
+    .eq("id", submissionId);
+  if (error) throw new Error(`Winners approve failed: ${error.message}`);
+}
+
+export async function rejectWinnerSubmission(submissionId: string, notes: string) {
+  const systemAdmin = await getSystemAdminUser();
+  const supabase = createSupabaseAdminClient();
+  const { error } = await asMutationClient(supabase)
+    .from("prize_bond_winner_submissions")
+    .update({ status: "rejected", reviewed_by: systemAdmin.id, reviewer_notes: notes || "Rejected via admin panel" })
+    .eq("id", submissionId);
+  if (error) throw new Error(`Winners reject failed: ${error.message}`);
 }
 
 export { domainNameToRlsDomain };

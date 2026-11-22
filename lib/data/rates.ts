@@ -249,6 +249,47 @@ export async function getFuelPrices(): Promise<FuelPrice[]> {
 // ---------------------------------------------------------------
 // Crypto
 // ---------------------------------------------------------------
+/**
+ * Why a live read: the CoinGecko cron (app/api/cron/crypto) writes
+ * history rows, but Vercel's Hobby plan only allows ONE cron run
+ * per day, so DB-only prices sat up to ~24h stale. Displayed prices
+ * therefore prefer a live CoinGecko read cached for 5 minutes via
+ * Next's fetch cache; the DB rows remain the fallback (and the
+ * source of history/sparkline) whenever the live read fails. Same
+ * CoinGecko ids as the cron route — keep the two maps in sync.
+ */
+const COINGECKO_ID_BY_SYMBOL: Record<string, string> = {
+  BTC: "bitcoin",
+  ETH: "ethereum",
+  USDT: "tether",
+  BNB: "binancecoin",
+  SOL: "solana",
+  XRP: "ripple",
+  USDC: "usd-coin",
+  ADA: "cardano",
+};
+
+async function fetchLiveCryptoPrices(symbols: string[]): Promise<Record<string, { usd: number; pkr: number }>> {
+  const ids = symbols.map((s) => COINGECKO_ID_BY_SYMBOL[s]).filter(Boolean).join(",");
+  if (!ids) return {};
+  try {
+    const res = await fetch(
+      `https://api.coingecko.com/api/v3/simple/price?ids=${ids}&vs_currencies=usd,pkr`,
+      { next: { revalidate: 300 } }
+    );
+    if (!res.ok) return {};
+    const json = (await res.json()) as Record<string, { usd?: number; pkr?: number }>;
+    const bySymbol: Record<string, { usd: number; pkr: number }> = {};
+    for (const symbol of symbols) {
+      const p = json[COINGECKO_ID_BY_SYMBOL[symbol]];
+      if (p?.usd && p?.pkr) bySymbol[symbol] = { usd: p.usd, pkr: p.pkr };
+    }
+    return bySymbol;
+  } catch {
+    return {};
+  }
+}
+
 export async function getCryptoRates(): Promise<CryptoRate[]> {
   const supabase = await createSupabaseServerClient();
   const [coins, { data: currentData, error: currentErr }, { data: historyData, error: historyErr }] = await Promise.all([
@@ -265,19 +306,23 @@ export async function getCryptoRates(): Promise<CryptoRate[]> {
   const current = (currentData ?? []) as CurrentCryptoRateRow[];
   const history = (historyData ?? []) as CryptoHistoryRow[];
 
+  const livePrices = await fetchLiveCryptoPrices(coins.map((c) => c.symbol));
+  const fetchedAt = new Date().toISOString();
+
   return coins
-    .filter((coin) => current.some((r) => r.coin_id === coin.id))
+    .filter((coin) => current.some((r) => r.coin_id === coin.id) || livePrices[coin.symbol])
     .map((coin) => {
-      const row = current.find((r) => r.coin_id === coin.id)!;
+      const row = current.find((r) => r.coin_id === coin.id);
+      const live = livePrices[coin.symbol];
       const coinHistory = history.filter((h) => h.coin_id === coin.id).map((h) => h.price_pkr);
       const { changePercent, trend, sparkline } = computeTrendFromHistory(coinHistory);
       return {
         symbol: coin.symbol,
         name: coin.name,
-        priceUsd: row.price_usd,
-        pricePkr: row.price_pkr,
+        priceUsd: live?.usd ?? row?.price_usd ?? 0,
+        pricePkr: live?.pkr ?? row?.price_pkr ?? 0,
         changePercent, trend, sparkline,
-        effectiveAt: row.effective_at,
+        effectiveAt: live ? fetchedAt : row?.effective_at ?? "",
       };
     });
 }

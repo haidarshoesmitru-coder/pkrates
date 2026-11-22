@@ -129,8 +129,8 @@ export function Navbar() {
             )}
           </Link>
           <ThemeToggle />
-          <Button className="hidden sm:inline-flex" size="sm">
-            Get Rate Alerts
+          <Button className="hidden sm:inline-flex" size="sm" asChild>
+            <Link href="/#newsletter">Get Rate Alerts</Link>
           </Button>
           <div className="lg:hidden">
             <MobileNav links={mobileLinks} />

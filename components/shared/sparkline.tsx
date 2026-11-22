@@ -11,6 +11,11 @@ export function Sparkline({
 }) {
   const width = 100;
   const height = 32;
+  // Fewer than two points has no line to draw (and would divide by
+  // zero below) — render nothing rather than a NaN polyline.
+  if (data.length < 2) {
+    return <svg viewBox={`0 0 ${width} ${height}`} className={cn("h-8 w-full", className)} aria-hidden="true" />;
+  }
   const min = Math.min(...data);
   const max = Math.max(...data);
   const range = max - min || 1;

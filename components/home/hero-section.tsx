@@ -101,9 +101,11 @@ export function HeroSection({ lastUpdated, goldKarachi24k }: HeroSectionProps) {
                   </div>
                 )}
               </div>
-              <Button size="lg" className="group">
-                View All Rates
-                <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
+              <Button size="lg" className="group" asChild>
+                <a href="#rates">
+                  View All Rates
+                  <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
+                </a>
               </Button>
             </motion.div>
 

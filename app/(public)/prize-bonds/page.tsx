@@ -20,6 +20,22 @@ export default async function PrizeBondsPage() {
   const [draws, recentResults] = await Promise.all([getPrizeBondDraws(), getRecentPrizeBondResults()]);
   const lastUpdated = new Date().toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
 
+  // Real draw frequency: count recorded draws (upcoming + recent
+  // results) in each of the last 7 weeks. Replaces a hardcoded
+  // illustrative series that was not derived from any data.
+  const weekMs = 7 * 24 * 60 * 60 * 1000;
+  const nowMs = Date.now();
+  const allDrawDates = [...draws, ...recentResults]
+    .map((d) => new Date(d.date).getTime())
+    .filter((t) => Number.isFinite(t));
+  const drawsPerWeek = Array.from({ length: 7 }, (_, i) => {
+    const weeksAgo = 6 - i;
+    return allDrawDates.filter((t) => {
+      const age = nowMs - t;
+      return age >= weeksAgo * weekMs && age < (weeksAgo + 1) * weekMs;
+    }).length;
+  });
+
   return (
     <>
       <CategoryPageHeader
@@ -78,7 +94,7 @@ export default async function PrizeBondsPage() {
         </section>
 
         <section className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <ChartPlaceholder title="Draw Frequency (illustrative)" data={[1, 1, 2, 1, 2, 1, 3]} unit="draws / week across denominations" />
+          <ChartPlaceholder title="Draw Frequency" data={drawsPerWeek} unit="draws / week across denominations" />
           <div>
             <h2 className="font-display text-lg font-semibold text-ink-900 dark:text-ink-100 mb-4">
               Recent Draw History

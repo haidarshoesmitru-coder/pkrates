@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { submitRate, approveSubmission, rejectSubmission, toggleSourceAutoPublish, updateUserRole } from "@/lib/data/admin";
+import { submitRate, approveSubmission, rejectSubmission, toggleSourceAutoPublish, updateUserRole, submitPrizeBondWinners, approveWinnerSubmission, rejectWinnerSubmission } from "@/lib/data/admin";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export async function signOutAction() {
@@ -40,6 +40,50 @@ export async function rejectSubmissionAction(domain: string, submissionId: strin
     return { error: err instanceof Error ? err.message : "Reject failed." };
   }
   revalidatePath(`/admin/${domain}`);
+  return {};
+}
+
+export async function submitPrizeBondWinnersAction(
+  drawId: string,
+  prizeTier: number,
+  prizeAmount: string,
+  bondNumbersText: string,
+  sourceId: string
+): Promise<{ error?: string }> {
+  const bondNumbers = bondNumbersText
+    .split(/[\n,]+/)
+    .map((n) => n.trim())
+    .filter(Boolean);
+  if (!drawId) return { error: "Select a draw first." };
+  if (bondNumbers.length === 0) return { error: "Enter at least one winning bond number." };
+  try {
+    await submitPrizeBondWinners(drawId, prizeTier, prizeAmount, bondNumbers, sourceId);
+  } catch (err) {
+    return { error: err instanceof Error ? err.message : "Winners submit failed." };
+  }
+  revalidatePath("/admin/prize-bonds");
+  return {};
+}
+
+export async function approveWinnerSubmissionAction(submissionId: string): Promise<{ error?: string }> {
+  try {
+    await approveWinnerSubmission(submissionId);
+  } catch (err) {
+    return { error: err instanceof Error ? err.message : "Approve failed." };
+  }
+  revalidatePath("/admin/prize-bonds");
+  revalidatePath("/prize-bonds");
+  revalidatePath("/");
+  return {};
+}
+
+export async function rejectWinnerSubmissionAction(submissionId: string, notes: string): Promise<{ error?: string }> {
+  try {
+    await rejectWinnerSubmission(submissionId, notes);
+  } catch (err) {
+    return { error: err instanceof Error ? err.message : "Reject failed." };
+  }
+  revalidatePath("/admin/prize-bonds");
   return {};
 }
 

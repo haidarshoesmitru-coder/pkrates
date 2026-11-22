@@ -51,7 +51,11 @@ export function MobileNav({ links }: { links: NavLink[] }) {
           ))}
         </nav>
         <div className="mt-auto px-6 py-5 border-t border-ink-200 dark:border-ink-800">
-          <Button className="w-full">Get Rate Alerts</Button>
+          <SheetClose asChild>
+            <Button className="w-full" asChild>
+              <Link href="/#newsletter">Get Rate Alerts</Link>
+            </Button>
+          </SheetClose>
         </div>
       </SheetContent>
     </Sheet>

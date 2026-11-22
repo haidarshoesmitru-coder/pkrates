@@ -9,15 +9,35 @@ import { PulseLine } from "@/components/shared/pulse-line";
 export function NewsletterSection() {
   const [email, setEmail] = React.useState("");
   const [submitted, setSubmitted] = React.useState(false);
+  const [error, setError] = React.useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = React.useState(false);
 
-  function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!email) return;
-    setSubmitted(true);
+    if (!email || isSubmitting) return;
+    setError(null);
+    setIsSubmitting(true);
+    try {
+      const res = await fetch("/api/newsletter", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
+      if (!res.ok) {
+        const data = (await res.json().catch(() => null)) as { error?: string } | null;
+        setError(data?.error ?? "Could not subscribe right now — please try again later.");
+        return;
+      }
+      setSubmitted(true);
+    } catch {
+      setError("Could not subscribe right now — please try again later.");
+    } finally {
+      setIsSubmitting(false);
+    }
   }
 
   return (
-    <section className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-14 sm:py-20">
+    <section id="newsletter" className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-14 sm:py-20 scroll-mt-20">
       <div className="relative overflow-hidden rounded-3xl border border-ink-200 dark:border-ink-800 bg-gradient-to-br from-pulse-600 to-pulse-800 px-6 py-14 sm:px-16 sm:py-16 text-white">
         <div className="absolute inset-x-0 bottom-0 text-white/10">
           <PulseLine className="h-24 w-full" />
@@ -43,7 +63,7 @@ export function NewsletterSection() {
               className="mt-7 flex items-center justify-center gap-2 rounded-full bg-white/10 px-5 py-3 text-sm font-medium"
             >
               <CheckCircle2 className="h-4 w-4" />
-              You&rsquo;re subscribed — check your inbox to confirm.
+              You&rsquo;re subscribed — your first digest arrives tomorrow morning.
             </motion.div>
           ) : (
             <form
@@ -61,11 +81,17 @@ export function NewsletterSection() {
               <Button
                 type="submit"
                 size="lg"
+                disabled={isSubmitting}
                 className="bg-white text-pulse-700 hover:bg-pulse-50"
               >
-                Subscribe
+                {isSubmitting ? "Subscribing…" : "Subscribe"}
               </Button>
             </form>
+          )}
+          {error && (
+            <p className="mt-4 text-sm font-medium text-white bg-white/15 rounded-full px-4 py-2 inline-block">
+              {error}
+            </p>
           )}
           <p className="mt-4 text-xs text-pulse-50/60">
             No spam. Unsubscribe anytime. Read our{" "}

@@ -8,6 +8,16 @@ import type { DomainConfig } from "@/types/admin";
  * lib/mock-data.ts and lib/admin-mock-data.ts, it correctly stays
  * as a static TypeScript module rather than a Supabase query.
  */
+/** All 14 cities tracked on the public site (names must match the
+ * `cities` table exactly — admin inserts resolve city_id by name).
+ * The 9 beyond the original 5 need their Sarafa Association source
+ * rows from migration 20261122110000_extra_cities_sources.sql. */
+const ALL_CITIES = [
+  "Karachi", "Lahore", "Islamabad", "Peshawar", "Rawalpindi", "Quetta",
+  "Multan", "Faisalabad", "Hyderabad", "Sialkot", "Bahawalpur",
+  "Gujranwala", "Sargodha", "Sukkur",
+];
+
 export const domainConfigs: Record<string, DomainConfig> = {
   gold: {
     slug: "gold",
@@ -16,7 +26,7 @@ export const domainConfigs: Record<string, DomainConfig> = {
     icon: "coins",
     primaryFieldKey: "ratePerTola",
     fields: [
-      { key: "city", label: "City", type: "select", options: ["Karachi", "Lahore", "Islamabad", "Peshawar", "Quetta"] },
+      { key: "city", label: "City", type: "select", options: ALL_CITIES },
       { key: "karat", label: "Karat", type: "select", options: ["24K", "22K", "21K", "18K"] },
       { key: "ratePerTola", label: "Rate per Tola", type: "number", suffix: "PKR" },
     ],
@@ -28,7 +38,7 @@ export const domainConfigs: Record<string, DomainConfig> = {
     icon: "gem",
     primaryFieldKey: "ratePerTola",
     fields: [
-      { key: "city", label: "City", type: "select", options: ["Karachi", "Lahore", "Islamabad", "Peshawar", "Quetta"] },
+      { key: "city", label: "City", type: "select", options: ALL_CITIES },
       { key: "purity", label: "Purity", type: "select", options: ["999 Fine", "925 Sterling"] },
       { key: "ratePerTola", label: "Rate per Tola", type: "number", suffix: "PKR" },
     ],
@@ -68,8 +78,9 @@ export const domainConfigs: Record<string, DomainConfig> = {
     fields: [
       { key: "denomination", label: "Denomination", type: "select", options: ["Rs. 100", "Rs. 200", "Rs. 750", "Rs. 1,500", "Rs. 7,500", "Rs. 15,000", "Rs. 25,000", "Rs. 40,000"] },
       { key: "drawNumber", label: "Draw Number", type: "number" },
-      { key: "city", label: "Draw City", type: "select", options: ["Karachi", "Lahore", "Islamabad", "Peshawar", "Multan", "Hyderabad"] },
+      { key: "city", label: "Draw City", type: "select", options: ALL_CITIES },
       { key: "drawDate", label: "Draw Date", type: "date" },
+      { key: "drawStatus", label: "Draw Status", type: "select", options: ["Scheduled", "Completed", "Postponed", "Cancelled"] },
     ],
   },
   cement: {

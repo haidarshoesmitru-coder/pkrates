@@ -1,6 +1,16 @@
 import { NextResponse } from "next/server";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 
+/**
+ * History writer for crypto prices. vercel.json schedules this
+ * once daily (01:00 UTC) because the Vercel Hobby plan does not
+ * allow more frequent crons — displayed prices do NOT depend on
+ * this cadence: getCryptoRates() in lib/data/rates.ts prefers a
+ * live CoinGecko read (5-minute fetch cache) and falls back to
+ * these DB rows. If the plan is upgraded, raising this schedule
+ * to hourly only densifies the history/sparkline data.
+ */
+
 const COINGECKO_ID_BY_SYMBOL: Record<string, string> = {
   BTC: "bitcoin",
   ETH: "ethereum",
